@@ -11,7 +11,11 @@ const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout, isAuthenticated } = useAuth();
   const { portal, folders, setFolders, userRole, setUserRole, isPortalAdmin, setIsPortalAdmin } = usePortal();
-  const [emails, setEmails] = useState<string[]>(['']);
+  const [emails, setEmails] = useState<
+    { email: string; userId: number | null; loading: boolean; error?: string }[]
+  >([{ email: '', userId: null, loading: false }]);
+
+
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -106,13 +110,11 @@ const DashboardPage: React.FC = () => {
   try {
     const userIds: number[] = [];
 
-    for (const email of emails) {
-      if (!email) continue;
-      const res = await apiClient.getUserByEmail(email);
-      if (res.error) {
-        console.warn(`Failed to fetch userId for ${email}: ${res.error}`);
-      } else if (res.data) {
-        userIds.push(res.data);
+    for (const item of emails) {
+      if (!item.email) continue;
+      if (item.userId !== null) {
+        userIds.push(item.userId);
+        continue;
       }
     }
 
@@ -124,12 +126,15 @@ const DashboardPage: React.FC = () => {
       price: createForm.price ? parseFloat(createForm.price) : undefined,
       accessDurationInDays: createForm.accessDurationInDays ? parseInt(createForm.accessDurationInDays) : undefined,
       parentFolderId: createForm.parentFolderId ? parseInt(createForm.parentFolderId) : undefined,
-      userIds, // pass the fetched userIds here
+      userIds,
     };
 
-    const res = await apiClient.createFolder(folderData);
+    const res: any = await apiClient.createFolder(folderData);
 
-    if (res.error) {
+    if (res.status === 'FAILURE' && res?.responseCode === 5000) {
+      // Specific access error
+      setCreateError("You don't have access to this");
+    } else if (res.error) {
       setCreateError(res.error || 'Failed to create folder');
     } else {
       setShowCreateModal(false);
@@ -141,7 +146,7 @@ const DashboardPage: React.FC = () => {
         accessDurationInDays: '',
         parentFolderId: '',
       });
-      setEmails(['']); // reset email inputs
+      setEmails([{ email: '', userId: null, loading: false }]);
       await loadFolders();
     }
   } catch (err) {
@@ -150,6 +155,7 @@ const DashboardPage: React.FC = () => {
 
   setCreateLoading(false);
 };
+
 
 
   const getRootFolders = () => {
@@ -241,31 +247,78 @@ const DashboardPage: React.FC = () => {
 
                         {/* Email Inputs */}
                         <div className="emails-inputs">
-                          {emails.map((email, index) => (
+                          {emails.map((item, index) => (
                             <div key={index} className="email-row">
                               <input
                                 type="email"
                                 placeholder="User Email"
-                                value={email}
+                                value={item.email}
                                 onChange={e => {
                                   const newEmails = [...emails];
-                                  newEmails[index] = e.target.value;
+                                  newEmails[index].email = e.target.value;
+                                  newEmails[index].userId = null; // reset userId if changed
+                                  newEmails[index].error = ''; // reset previous error
                                   setEmails(newEmails);
                                 }}
+                                onBlur={async () => {
+                                  if (!item.email || item.userId || item.loading) return; // skip if empty or already fetched
+
+                                  const newEmails = [...emails];
+                                  newEmails[index].loading = true;
+                                  setEmails(newEmails);
+
+                                  try {
+                                    const res = await apiClient.getUserByEmail(item.email);
+                                    newEmails[index].loading = false;
+
+                                    if (res?.data) {
+                                      // Only SUCCESS is valid
+                                      newEmails[index].userId = res.data;
+                                      newEmails[index].error = '';
+                                    } else {
+                                      newEmails[index].userId = null;
+                                      newEmails[index].error = 'User does not exist';
+                                    }
+                                  } catch (err) {
+                                    newEmails[index].loading = false;
+                                    newEmails[index].userId = null;
+                                    newEmails[index].error = 'User does not exist';
+                                  }
+
+                                  setEmails(newEmails);
+                                }}
+                                disabled={item.userId !== null} // read-only after success
                                 required
                               />
+                              {item.loading && <span className="loading-spinner">⏳</span>}
+                              {item.error && <span className="error-message">{item.error}</span>}
+
+                              {/* Remove button */}
                               {emails.length > 1 && (
-                                <button type="button" onClick={() => {
-                                  const newEmails = emails.filter((_, i) => i !== index);
-                                  setEmails(newEmails);
-                                }}>Remove</button>
+                                <button
+                                  type="button"
+                                  onClick={() => setEmails(emails.filter((_, i) => i !== index))}
+                                >
+                                  Remove
+                                </button>
                               )}
                             </div>
                           ))}
-                          <button type="button" onClick={() => setEmails([...emails, ''])}>
-                            Add Another Email
-                          </button>
+
+                          {/* Add another email button only if last email has no error */}
+                          {emails[emails.length - 1]?.error === '' && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setEmails([...emails, { email: '', userId: null, loading: false }])
+                              }
+                            >
+                              Add Another Email
+                            </button>
+                          )}
                         </div>
+
+
 
                         <button type="submit" className="btn-primary" disabled={createLoading}>
                           {createLoading ? 'Creating...' : 'Create'}

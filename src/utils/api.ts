@@ -220,6 +220,36 @@ async getUserByEmail(email: string): Promise<ApiResponse<number>> {
     }
   }
 
+  async getFolderDetails(folderId: number): Promise<ApiResponse> {
+  try {
+    const token = this.getAuthToken();
+    const userId = this.getAuthUserId();
+
+    const response = await fetch(
+      `http://localhost:9091/content/getFolderDetails?folderId=${folderId}`,
+      {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(userId ? { 'userId': userId } : {}),
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return { error: data.error ?? 'Failed to fetch folder details', message: data.message };
+    }
+
+    return { data };
+  } catch (err) {
+    return { error: 'Network error. Could not fetch folder details' };
+  }
+}
+
+
   logout(): void {
     sessionStorage.removeItem('jwt_token');
     sessionStorage.removeItem('user');

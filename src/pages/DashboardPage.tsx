@@ -167,7 +167,7 @@ const DashboardPage: React.FC = () => {
   };
 
   const isFolderAdmin = getRootFolders().some(f => f.canEdit);
-  const canCreateFolders = user?.role === 'super' || isPortalAdmin || isFolderAdmin;
+  const canCreateFolders = user?.role === 'super' || isPortalAdmin ;
   console.log("canCreateFolders ", canCreateFolders);
 
   return (

@@ -1,0 +1,57 @@
+.portal-loader {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+
+  .loader-content,
+  .error-content {
+    text-align: center;
+    color: white;
+
+    .spinner-large {
+      width: 64px;
+      height: 64px;
+      border: 6px solid rgba(255, 255, 255, 0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 1.5rem;
+    }
+
+    p {
+      font-size: 1.1rem;
+      font-weight: 500;
+    }
+
+    h2 {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+    }
+
+    .btn-primary {
+      margin-top: 1.5rem;
+      padding: 0.875rem 2rem;
+      background: white;
+      color: #667eea;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+      }
+    }
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

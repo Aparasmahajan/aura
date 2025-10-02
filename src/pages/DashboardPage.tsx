@@ -11,6 +11,7 @@ const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout, isAuthenticated } = useAuth();
   const { portal, folders, setFolders, userRole, setUserRole, isPortalAdmin, setIsPortalAdmin } = usePortal();
+  const [emails, setEmails] = useState<string[]>(['']);
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -41,6 +42,21 @@ const DashboardPage: React.FC = () => {
     loadFolders();
   }, [isAuthenticated, portal]);
 
+  useEffect(() => {
+    if (!user) return;
+
+    // Get portal admins from sessionStorage
+    const portalAdmins: string[] = JSON.parse(sessionStorage.getItem('portal_admins') || '[]');
+
+    // Check if current user is in the admins list
+    console.log("user names are ", user.username);
+
+    const isAdmin = portalAdmins.includes(user.username);
+    setIsPortalAdmin(isAdmin);
+
+    console.log("isAdmin ", isAdmin);
+  }, [user]);
+
   const loadFolders = async () => {
     if (!portal) return;
 
@@ -70,8 +86,8 @@ const DashboardPage: React.FC = () => {
         created_at: f.createdAt ?? '',
         updated_at: f.updatedAt ?? '',
       })) : []);
-      setUserRole(null);
-      setIsPortalAdmin(false);
+      // setUserRole(null);
+      // setIsPortalAdmin(false);
     }
 
     setIsLoading(false);
@@ -83,33 +99,58 @@ const DashboardPage: React.FC = () => {
   };
 
   const handleCreateFolder = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setCreateError('');
-    setCreateLoading(true);
-    try {
-      const folderData: any = {
-        portalName: portal?.name || portal?.display_name || '',
-        name: createForm.name,
-        description: createForm.description,
-        isUniversal: createForm.isUniversal,
-        price: createForm.price ? parseFloat(createForm.price) : undefined,
-        accessDurationInDays: createForm.accessDurationInDays ? parseInt(createForm.accessDurationInDays) : undefined,
-        parentFolderId: createForm.parentFolderId ? parseInt(createForm.parentFolderId) : undefined,
-        // createdByUserId and userIds can be set from user context if needed
-      };
-      const res = await apiClient.createFolder(folderData);
+  e.preventDefault();
+  setCreateError('');
+  setCreateLoading(true);
+
+  try {
+    const userIds: number[] = [];
+
+    for (const email of emails) {
+      if (!email) continue;
+      const res = await apiClient.getUserByEmail(email);
       if (res.error) {
-        setCreateError(res.error || 'Failed to create folder');
-      } else {
-        setShowCreateModal(false);
-        setCreateForm({ name: '', description: '', isUniversal: false, price: '', accessDurationInDays: '', parentFolderId: '' });
-        await loadFolders();
+        console.warn(`Failed to fetch userId for ${email}: ${res.error}`);
+      } else if (res.data) {
+        userIds.push(res.data);
       }
-    } catch (err) {
-      setCreateError('Failed to create folder');
     }
-    setCreateLoading(false);
-  };
+
+    const folderData: any = {
+      portalName: portal?.name || portal?.display_name || '',
+      name: createForm.name,
+      description: createForm.description,
+      isUniversal: createForm.isUniversal,
+      price: createForm.price ? parseFloat(createForm.price) : undefined,
+      accessDurationInDays: createForm.accessDurationInDays ? parseInt(createForm.accessDurationInDays) : undefined,
+      parentFolderId: createForm.parentFolderId ? parseInt(createForm.parentFolderId) : undefined,
+      userIds, // pass the fetched userIds here
+    };
+
+    const res = await apiClient.createFolder(folderData);
+
+    if (res.error) {
+      setCreateError(res.error || 'Failed to create folder');
+    } else {
+      setShowCreateModal(false);
+      setCreateForm({
+        name: '',
+        description: '',
+        isUniversal: false,
+        price: '',
+        accessDurationInDays: '',
+        parentFolderId: '',
+      });
+      setEmails(['']); // reset email inputs
+      await loadFolders();
+    }
+  } catch (err) {
+    setCreateError('Failed to create folder');
+  }
+
+  setCreateLoading(false);
+};
+
 
   const getRootFolders = () => {
     return folders.filter(f => f.parent_id == null || f.parent_id === '' || f.parent_id === 'null');
@@ -121,6 +162,7 @@ const DashboardPage: React.FC = () => {
 
   const isFolderAdmin = getRootFolders().some(f => f.canEdit);
   const canCreateFolders = user?.role === 'super' || isPortalAdmin || isFolderAdmin;
+  console.log("canCreateFolders ", canCreateFolders);
 
   return (
     <div className="dashboard-page">
@@ -196,7 +238,35 @@ const DashboardPage: React.FC = () => {
                           value={createForm.accessDurationInDays}
                           onChange={e => setCreateForm(f => ({ ...f, accessDurationInDays: e.target.value }))}
                         />
-                        {/* Optionally, parentFolderId for subfolders */}
+
+                        {/* Email Inputs */}
+                        <div className="emails-inputs">
+                          {emails.map((email, index) => (
+                            <div key={index} className="email-row">
+                              <input
+                                type="email"
+                                placeholder="User Email"
+                                value={email}
+                                onChange={e => {
+                                  const newEmails = [...emails];
+                                  newEmails[index] = e.target.value;
+                                  setEmails(newEmails);
+                                }}
+                                required
+                              />
+                              {emails.length > 1 && (
+                                <button type="button" onClick={() => {
+                                  const newEmails = emails.filter((_, i) => i !== index);
+                                  setEmails(newEmails);
+                                }}>Remove</button>
+                              )}
+                            </div>
+                          ))}
+                          <button type="button" onClick={() => setEmails([...emails, ''])}>
+                            Add Another Email
+                          </button>
+                        </div>
+
                         <button type="submit" className="btn-primary" disabled={createLoading}>
                           {createLoading ? 'Creating...' : 'Create'}
                         </button>
@@ -205,6 +275,7 @@ const DashboardPage: React.FC = () => {
                         </button>
                         {createError && <div className="error-message">{createError}</div>}
                       </form>
+
                     </div>
                   </div>
                 )}

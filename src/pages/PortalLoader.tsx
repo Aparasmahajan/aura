@@ -25,38 +25,51 @@ const PortalLoader: React.FC = () => {
   }, [portalName]);
 
   const loadPortal = async () => {
-    if (!portalName) return;
+  if (!portalName) return;
 
-    setIsLoading(true);
-    setError('');
+  setIsLoading(true);
+  setError('');
 
-    const response = await apiClient.getPortalInfo(portalName);
+  const response = await apiClient.getPortalInfo(portalName);
 
-    if (response.error) {
-      setError(response.error);
-      setIsLoading(false);
-      return;
+  if (response.error) {
+    setError(response.error);
+    setIsLoading(false);
+    return;
+  }
+
+  if (response.data) {
+    const apiPortal = response.data?.data ?? response.data;
+
+    // Map portal data for context
+    const mapped = {
+      id: String(apiPortal.portalId ?? apiPortal.id),
+      name: apiPortal.portalName ?? apiPortal.name,
+      display_name: apiPortal.portalName ?? apiPortal.display_name ?? apiPortal.name,
+      description: apiPortal.description ?? '',
+      logo_url: apiPortal.logoUrl ?? apiPortal.logo_url ?? '',
+      banner_url: apiPortal.bannerUrl ?? apiPortal.banner_url ?? '',
+      is_active: apiPortal.isActive ?? apiPortal.is_active ?? true,
+    } as const;
+
+    setPortal(mapped);
+
+    // Store admin usernames in sessionStorage
+    const adminUsernames: string[] = Array.isArray(apiPortal.admins)
+      ? apiPortal.admins.map((admin: any) =>
+          typeof admin === 'string' ? admin : admin.username
+        )
+      : [];
+    sessionStorage.setItem('portal_admins', JSON.stringify(adminUsernames));
+
+    setIsLoading(false);
+
+    if (!isAuthenticated && window.location.pathname === `/${portalName}`) {
+      navigate(`/${portalName}/login`);
     }
+  }
+};
 
-    if (response.data) {
-      const apiPortal = response.data?.data ?? response.data;
-      const mapped = {
-        id: String(apiPortal.portalId ?? apiPortal.id),
-        name: apiPortal.portalName ?? apiPortal.name,
-        display_name: apiPortal.portalName ?? apiPortal.display_name ?? apiPortal.name,
-        description: apiPortal.description ?? '',
-        logo_url: apiPortal.logoUrl ?? apiPortal.logo_url ?? '',
-        banner_url: apiPortal.bannerUrl ?? apiPortal.banner_url ?? '',
-        is_active: apiPortal.isActive ?? apiPortal.is_active ?? true,
-      } as const;
-      setPortal(mapped);
-      setIsLoading(false);
-
-      if (!isAuthenticated && window.location.pathname === `/${portalName}`) {
-        navigate(`/${portalName}/login`);
-      }
-    }
-  };
 
   if (isLoading) {
     return (

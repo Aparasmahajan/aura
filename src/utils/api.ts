@@ -138,6 +138,60 @@ class ApiClient {
     }
   }
 
+  async createFolder(folderData: {
+  portalName: string;
+  name: string;
+  description?: string;
+  isUniversal?: boolean;
+  price?: number;
+  accessDurationInDays?: number;
+  parentFolderId?: number;
+  createdByUserId?: number;
+  userIds?: number[];
+}): Promise<ApiResponse> {
+  try {
+    const token = this.getAuthToken();
+    const userId = this.getAuthUserId();
+
+    const response = await fetch(`http://localhost:9091/content/createFolder`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(userId ? { 'userId': userId } : {}),
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(folderData),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return { error: data.error ?? 'Failed to create folder', message: data.message };
+    }
+
+    return { data };
+  } catch (err) {
+    return { error: 'Network error. Could not create folder' };
+  }
+}
+
+async getUserByEmail(email: string): Promise<ApiResponse<number>> {
+  try {
+    const response = await fetch(
+      `http://localhost:9090/profiler/user/getUserByEmail?email=${encodeURIComponent(email)}`,
+      {
+        method: 'POST',
+        headers: this.getHeaders(true),
+      }
+    );
+    const data = await response.json();
+    if (!response.ok) return { error: data.message || 'Failed to fetch user by email' };
+    return { data: data.data }; // userId as number
+  } catch (err) {
+    return { error: 'Network error' };
+  }
+}
+
   async getPortalFolders(portalId: string): Promise<ApiResponse> {
     try {
       const token = this.getAuthToken();

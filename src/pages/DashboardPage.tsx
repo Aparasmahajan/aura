@@ -103,58 +103,58 @@ const DashboardPage: React.FC = () => {
   };
 
   const handleCreateFolder = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setCreateError('');
-  setCreateLoading(true);
+    e.preventDefault();
+    setCreateError('');
+    setCreateLoading(true);
 
-  try {
-    const userIds: number[] = [];
+    try {
+      const userIds: number[] = [];
 
-    for (const item of emails) {
-      if (!item.email) continue;
-      if (item.userId !== null) {
-        userIds.push(item.userId);
-        continue;
+      for (const item of emails) {
+        if (!item.email) continue;
+        if (item.userId !== null) {
+          userIds.push(item.userId);
+          continue;
+        }
       }
+
+      const folderData: any = {
+        portalName: portal?.name || portal?.display_name || '',
+        name: createForm.name,
+        description: createForm.description,
+        isUniversal: createForm.isUniversal,
+        price: createForm.price ? parseFloat(createForm.price) : undefined,
+        accessDurationInDays: createForm.accessDurationInDays ? parseInt(createForm.accessDurationInDays) : undefined,
+        parentFolderId: createForm.parentFolderId ? parseInt(createForm.parentFolderId) : undefined,
+        userIds,
+      };
+
+      const res: any = await apiClient.createFolder(folderData);
+
+      if (res.status === 'FAILURE' && res?.responseCode === 5000) {
+        // Specific access error
+        setCreateError("You don't have access to this");
+      } else if (res.error) {
+        setCreateError(res.error || 'Failed to create folder');
+      } else {
+        setShowCreateModal(false);
+        setCreateForm({
+          name: '',
+          description: '',
+          isUniversal: false,
+          price: '',
+          accessDurationInDays: '',
+          parentFolderId: '',
+        });
+        setEmails([{ email: '', userId: null, loading: false }]);
+        await loadFolders();
+      }
+    } catch (err) {
+      setCreateError('Failed to create folder');
     }
 
-    const folderData: any = {
-      portalName: portal?.name || portal?.display_name || '',
-      name: createForm.name,
-      description: createForm.description,
-      isUniversal: createForm.isUniversal,
-      price: createForm.price ? parseFloat(createForm.price) : undefined,
-      accessDurationInDays: createForm.accessDurationInDays ? parseInt(createForm.accessDurationInDays) : undefined,
-      parentFolderId: createForm.parentFolderId ? parseInt(createForm.parentFolderId) : undefined,
-      userIds,
-    };
-
-    const res: any = await apiClient.createFolder(folderData);
-
-    if (res.status === 'FAILURE' && res?.responseCode === 5000) {
-      // Specific access error
-      setCreateError("You don't have access to this");
-    } else if (res.error) {
-      setCreateError(res.error || 'Failed to create folder');
-    } else {
-      setShowCreateModal(false);
-      setCreateForm({
-        name: '',
-        description: '',
-        isUniversal: false,
-        price: '',
-        accessDurationInDays: '',
-        parentFolderId: '',
-      });
-      setEmails([{ email: '', userId: null, loading: false }]);
-      await loadFolders();
-    }
-  } catch (err) {
-    setCreateError('Failed to create folder');
-  }
-
-  setCreateLoading(false);
-};
+    setCreateLoading(false);
+  };
 
 
 
@@ -272,7 +272,6 @@ const DashboardPage: React.FC = () => {
                                     newEmails[index].loading = false;
 
                                     if (res?.data) {
-                                      // Only SUCCESS is valid
                                       newEmails[index].userId = res.data;
                                       newEmails[index].error = '';
                                     } else {
@@ -288,8 +287,9 @@ const DashboardPage: React.FC = () => {
                                   setEmails(newEmails);
                                 }}
                                 disabled={item.userId !== null} // read-only after success
-                                required
+                              // removed `required` here
                               />
+
                               {item.loading && <span className="loading-spinner">⏳</span>}
                               {item.error && <span className="error-message">{item.error}</span>}
 

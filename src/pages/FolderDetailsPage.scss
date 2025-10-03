@@ -6,18 +6,21 @@
   margin: 0 auto;
 
   .folder-header {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    margin-bottom: 2rem;
+  display: flex;
+  flex-direction: column; // stack back button and title vertically
+  align-items: center; // center the title horizontally
+  gap: 1rem; // spacing between back button and title
+  margin-bottom: 2rem;
 
     h1 {
       font-size: 1.75rem;
       font-weight: 700;
       color: #1a202c;
+      text-align: center;
     }
 
     .btn-back {
+      align-self: flex-start;
       display: flex;
       align-items: center;
       gap: 0.5rem;
@@ -120,5 +123,123 @@
 @keyframes spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+.folder-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+
+  h1 {
+    margin: 0 1rem;
+    font-size: 1.5rem;
+  }
+
+  .btn-back, .btn-create {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    padding: 0.4rem 0.8rem;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background-color 0.2s;
+
+    &:hover {
+      background-color: #0056b3;
+    }
+  }
+
+  .btn-create {
+    background-color: #28a745;
+
+    &:hover {
+      background-color: #1e7e34;
+    }
+  }
+}
+
+.folder-content {
+  .folder-description {
+    margin-bottom: 1rem;
+    font-style: italic;
+  }
+
+  .folders-grid, .contents-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 1rem;
+  }
+
+  .folder-card, .content-card {
+    padding: 0.6rem;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    cursor: pointer;
+    transition: box-shadow 0.2s;
+
+    &:hover {
+      box-shadow: 0 0 8px rgba(0,0,0,0.1);
+    }
+
+    h3 {
+      margin: 0;
+      font-size: 1rem;
+    }
+
+    p {
+      margin: 0.2rem 0 0;
+      font-size: 0.85rem;
+    }
+
+    a {
+      font-size: 0.8rem;
+      color: #007bff;
+      text-decoration: none;
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+  }
+
+  .empty {
+    font-style: italic;
+    color: #666;
+  }
+}
+
+
+.create-folder-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  margin-bottom: 1.5rem;
+  background: linear-gradient(135deg, #28a745 0%, #218838 100%); // green gradient
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(33, 136, 56, 0.3);
+    background: linear-gradient(135deg, #218838 0%, #1c7430 100%);
+  }
+
+  svg {
+    stroke: white; // ensures any icons inside are white
   }
 }

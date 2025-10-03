@@ -2,7 +2,7 @@
   min-height: 100vh;
   background: #f7fafc;
   padding: 2rem;
-  max-width: 1200px;
+  max-width: none;
   margin: 0 auto;
 
   .folder-header {
@@ -51,11 +51,11 @@
     color: #2d3748;
   }
 
-  .folders-grid, .contents-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 1.25rem;
-  }
+  // .folders-grid, .contents-grid {
+  //   display: grid;
+  //   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  //   gap: 1.25rem;
+  // }
 
   .folder-card, .content-card {
     background: white;
@@ -170,11 +170,27 @@
     font-style: italic;
   }
 
-  .folders-grid, .contents-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 1rem;
+  .folders-grid,
+.contents-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.25rem;
+}
+
+@media (max-width: 1024px) {
+  .folders-grid,
+  .contents-grid {
+    grid-template-columns: repeat(2, 1fr); // 2 columns for medium screens
   }
+}
+
+// Adjust for phones
+@media (max-width: 768px) {
+  .folders-grid,
+  .contents-grid {
+    grid-template-columns: 1fr; // 1 column for small screens
+  }
+}
 
   .folder-card, .content-card {
     padding: 0.6rem;

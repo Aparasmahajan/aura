@@ -11,14 +11,14 @@ const HomePage: React.FC = () => {
       <div className="home-container">
         <div className="home-content">
           <Globe size={64} className="home-icon" />
-          <h1>Multi-Portal Application</h1>
+          <h1>Aura</h1>
           <p className="subtitle">
             Access your portal by visiting <code>/portalName</code>
           </p>
           <div className="info-box">
             <h3>Example</h3>
-            <p>If your portal name is "company", visit:</p>
-            <code className="url-example">/company</code>
+            <p>If your portal name is "aura", visit:</p>
+            <code className="url-example">/aura</code>
           </div>
         </div>
       </div>

@@ -166,7 +166,6 @@ const DashboardPage: React.FC = () => {
     return folders.filter(f => f.parent_id === parentId);
   };
 
-  const isFolderAdmin = getRootFolders().some(f => f.canEdit);
   const canCreateFolders = user?.role === 'super' || isPortalAdmin ;
   console.log("canCreateFolders ", canCreateFolders);
 

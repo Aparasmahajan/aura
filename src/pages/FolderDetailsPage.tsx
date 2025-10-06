@@ -38,7 +38,7 @@ interface ContentItem {
 const FolderDetailsPage: React.FC = () => {
     const { folderId, portalName } = useParams<{ folderId: string; portalName: string }>();
     const navigate = useNavigate();
-    const { isAuthenticated } = useAuth();
+    const { isAuthenticated, user, logout } = useAuth();
 
     const [folder, setFolder] = useState<FolderDetails | null>(null);
     const [loading, setLoading] = useState(true);
@@ -81,10 +81,21 @@ const FolderDetailsPage: React.FC = () => {
     return (
         <div className="folder-details-page">
             <header className="folder-header">
-                <button className="btn-back" onClick={() => navigate(-1)}>
-                    <ArrowLeft size={18} /> Back
-                </button>
-                <div className="folder-title-container">
+                <div className="header-top">
+                    <button className="btn-back" onClick={() => navigate(-1)}>
+                        <ArrowLeft size={18} /> Back
+                    </button>
+                    <div className="user-section">
+                        <div className="user-info">
+                            <span>{user?.username}</span>
+                            {user?.role && (
+                                <span className={`role-badge role-${user.role}`}>{user.role}</span>
+                            )}
+                        </div>
+                        <button className="btn-logout" onClick={logout}>Logout</button>
+                    </div>
+                </div>
+                <div className="folder-title-row">
                     <h1>{folder?.name || 'Folder'}</h1>
                 </div>
             </header>

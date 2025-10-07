@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Folder, FileVideo, FileText, ArrowLeft, Plus, FolderPlus } from 'lucide-react';
+import { Folder, FileVideo, FileText, ArrowLeft, FolderPlus, SwatchBook, Book } from 'lucide-react';
 import { apiClient } from '../utils/api';
 import { useAuth } from '../contexts/AuthContext';
 import CreateFolderModal from '../pages/CreateFolderModal';
+import CreateContentModal from '../pages/CreateContentModal';
 
 import './FolderDetailsPage.scss';
 
@@ -44,6 +45,7 @@ const FolderDetailsPage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [showCreateModal, setShowCreateModal] = useState(false);
+    const [showCreateContentModal, setShowCreateContentModal] = useState(false);
 
     useEffect(() => {
         if (!isAuthenticated) {
@@ -74,9 +76,7 @@ const FolderDetailsPage: React.FC = () => {
         navigate(`/${portalName}/folder/${id}`);
     };
 
-    const handleCreateFolder = () => {
-        navigate(`/${portalName}/folder/${folderId}/create`);
-    };
+    // create-folder handled via modal trigger button; route helper removed
 
     return (
         <div className="folder-details-page">
@@ -114,15 +114,28 @@ const FolderDetailsPage: React.FC = () => {
                 <div className="folder-content">
                     {folder.description && <p className="folder-description">{folder.description}</p>}
                     {!loading && folder && folder.canEdit && (
-                        <button className="btn-primary create-folder-btn" onClick={() => setShowCreateModal(true)}>
-                            <FolderPlus size={20} /> Create Folder
-                        </button>
+                        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                            <button className="btn-primary create-content-btn" onClick={() => setShowCreateContentModal(true)}>
+                                <Book size={20} />+ Add Content
+                            </button>
+                            <button className="btn-primary create-folder-btn" onClick={() => setShowCreateModal(true)}>
+                                <FolderPlus size={20} /> Create Folder
+                            </button>
+                            
+                        </div>
                     )}
                     {showCreateModal && (
                         <CreateFolderModal
                             portalName={portalName || ''}
                             parentFolderId={folder?.folderId}
                             onClose={() => setShowCreateModal(false)}
+                            onCreated={loadFolder}
+                        />
+                    )}
+                    {showCreateContentModal && folder && (
+                        <CreateContentModal
+                            folderId={folder.folderId}
+                            onClose={() => setShowCreateContentModal(false)}
                             onCreated={loadFolder}
                         />
                     )}

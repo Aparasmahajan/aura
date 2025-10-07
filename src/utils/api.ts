@@ -255,6 +255,50 @@ async getUserByEmail(email: string): Promise<ApiResponse<number>> {
     sessionStorage.removeItem('user');
   }
 
+  async createContent(content: {
+    folderId: number;
+    type: string;
+    title: string;
+    description?: string;
+    fileUrl?: string;
+    textContent?: string | null;
+    mimeType?: string;
+    duration?: string | null;
+    pageCount?: number | null;
+    resolution?: string | null;
+    thumbnailUrl?: string | null;
+  }): Promise<ApiResponse> {
+    try {
+      const token = this.getAuthToken();
+      const userId = this.getAuthUserId();
+
+      const payload = {
+        ...content,
+        requestingUserId: userId ? Number(userId) : undefined,
+      };
+
+      const response = await fetch(`http://localhost:9091/content/createContent`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(userId ? { 'userId': userId } : {}),
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return { error: data.error ?? 'Failed to create content', message: data.message };
+      }
+
+      return { data };
+    } catch (err) {
+      return { error: 'Network error. Could not create content' };
+    }
+  }
+
   getStoredUser(): any {
     const userStr = sessionStorage.getItem('user');
     return userStr ? JSON.parse(userStr) : null;

@@ -44,7 +44,7 @@ const CreateFolderModal: React.FC<CreateFolderModalProps> = ({ portalName, paren
         isUniversal: createForm.isUniversal,
         price: createForm.price ? parseFloat(createForm.price) : undefined,
         accessDurationInDays: createForm.accessDurationInDays ? parseInt(createForm.accessDurationInDays) : undefined,
-        parentFolderId,
+        parentFolderId: parentFolderId !=null ? parentFolderId : null,
         userIds,
       };
 

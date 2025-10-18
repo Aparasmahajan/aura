@@ -155,6 +155,11 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     setTimeout(() => setShowControls(false), 3000);
   };
 
+  const handleDoubleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    toggleFullscreen();
+  };
+
   return (
     <div className="video-player-container">
       <div 
@@ -162,6 +167,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         onMouseMove={handleMouseMove}
         onMouseLeave={() => setShowControls(false)}
         onClick={togglePlay}
+        onDoubleClick={handleDoubleClick}
       >
         <video
           ref={videoRef}

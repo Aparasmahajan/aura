@@ -84,7 +84,12 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     };
   }, []);
 
-  const togglePlay = () => {
+  const togglePlay = (e?: React.MouseEvent) => {
+    // Prevent event bubbling if clicking on controls
+    if (e) {
+      e.stopPropagation();
+    }
+    
     const video = videoRef.current;
     if (!video) return;
 
@@ -95,7 +100,11 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     }
   };
 
-  const toggleMute = () => {
+  const toggleMute = (e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
+    
     const video = videoRef.current;
     if (!video) return;
 
@@ -103,7 +112,11 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     setIsMuted(!isMuted);
   };
 
-  const toggleFullscreen = () => {
+  const toggleFullscreen = (e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
+    
     const video = videoRef.current;
     if (!video) return;
 
@@ -121,6 +134,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   };
 
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+    e.stopPropagation();
+    
     const video = videoRef.current;
     if (!video) return;
 
@@ -146,6 +161,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         className="video-wrapper"
         onMouseMove={handleMouseMove}
         onMouseLeave={() => setShowControls(false)}
+        onClick={togglePlay}
       >
         <video
           ref={videoRef}
@@ -173,7 +189,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         )}
 
         <div className={`video-controls ${showControls ? 'show' : 'hide'}`}>
-          <div className="video-progress">
+          <div className="video-progress" onClick={(e) => e.stopPropagation()}>
             <input
               type="range"
               min="0"
@@ -186,11 +202,11 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
           
           <div className="video-controls-bottom">
             <div className="video-controls-left">
-              <button className="control-btn" onClick={togglePlay}>
+              <button className="control-btn" onClick={(e) => togglePlay(e)}>
                 {isPlaying ? <Pause size={20} /> : <Play size={20} />}
               </button>
               
-              <button className="control-btn" onClick={toggleMute}>
+              <button className="control-btn" onClick={(e) => toggleMute(e)}>
                 {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
               </button>
               
@@ -200,7 +216,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
             </div>
             
             <div className="video-controls-right">
-              <button className="control-btn" onClick={toggleFullscreen}>
+              <button className="control-btn" onClick={(e) => toggleFullscreen(e)}>
                 <Maximize size={20} />
               </button>
             </div>

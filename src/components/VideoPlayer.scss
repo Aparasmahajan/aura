@@ -4,15 +4,30 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   overflow: hidden;
   margin-bottom: 1.5rem;
+  display: flex;
+  flex-direction: column;
+
+  @media (min-width: 1024px) {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 1.5rem;
+  }
 
   .video-wrapper {
     position: relative;
     background: #000;
     aspect-ratio: 16/9;
+    max-height: 60vh;
     overflow: hidden;
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
+
+    @media (min-width: 1024px) {
+      width: 80%;
+      max-height: 70vh;
+    }
 
     .video-element {
       width: 100%;
@@ -145,6 +160,13 @@
     padding: 1.5rem;
     background: #f7fafc;
     border-top: 1px solid #e2e8f0;
+    flex: 1;
+
+    @media (min-width: 1024px) {
+      border-top: none;
+      border-left: 1px solid #e2e8f0;
+      padding: 1.5rem 1.5rem 1.5rem 0;
+    }
 
     .video-info-title {
       margin: 0 0 0.75rem;
@@ -187,6 +209,8 @@
 @media (max-width: 768px) {
   .video-player-container {
     .video-wrapper {
+      max-height: 50vh;
+      
       .video-controls {
         padding: 0.75rem;
 
@@ -233,6 +257,8 @@
 @media (max-width: 480px) {
   .video-player-container {
     .video-wrapper {
+      max-height: 40vh;
+      
       .video-controls {
         .video-controls-bottom {
           .video-controls-left,

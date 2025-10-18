@@ -128,14 +128,36 @@
 
   // Grid containers
   // Intentionally mirroring Dashboard grids
-  .folders-grid,
-  .contents-grid {
+  .folders-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
     gap: 1.5rem;
   }
 
-  .folder-card, .content-card {
+  .contents-sections {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  .content-section {
+    .section-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin: 0 0 1rem;
+      color: #2d3748;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid #e2e8f0;
+    }
+
+    .content-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1.5rem;
+    }
+  }
+
+  .folder-card {
     background: white;
     border-radius: 12px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
@@ -178,14 +200,6 @@
       font-size: 0.9rem;
       color: #718096;
       line-height: 1.5;
-    }
-
-    a {
-      font-size: 0.85rem;
-      color: #667eea;
-      text-decoration: underline;
-      margin-top: 0.25rem;
-      display: inline-block;
     }
   }
 
@@ -320,21 +334,40 @@
 }
 
 @media (max-width: 1024px) {
-  .folders-grid,
-  .contents-grid {
+  .folders-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .content-section {
+    .content-grid {
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    }
   }
 }
 
 // Adjust for phones
 @media (max-width: 768px) {
-  .folders-grid,
-  .contents-grid {
+  .folders-grid {
     grid-template-columns: 1fr;
+  }
+
+  .content-section {
+    .content-grid {
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1rem;
+    }
   }
 }
 
-  .folder-card, .content-card {
+@media (max-width: 480px) {
+  .content-section {
+    .content-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+}
+
+  .folder-card {
     padding: 1.5rem;
     border: none;
     border-radius: 12px;
@@ -355,4 +388,145 @@
   align-items: center;
   gap: 0.5rem;
   margin-bottom: 1.5rem;
+}
+
+// Content Modal Styles
+.content-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 2rem;
+
+  .content-modal {
+    background: white;
+    border-radius: 12px;
+    max-width: 90vw;
+    max-height: 90vh;
+    width: 100%;
+    overflow: hidden;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+
+    .content-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.5rem;
+      border-bottom: 1px solid #e2e8f0;
+      background: #f7fafc;
+
+      h2 {
+        margin: 0;
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #1a202c;
+        flex: 1;
+        padding-right: 1rem;
+      }
+
+      .close-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        background: white;
+        color: #718096;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+
+        &:hover {
+          background: #f0f4ff;
+          color: #667eea;
+          border-color: #667eea;
+        }
+
+        svg {
+          stroke: currentColor;
+        }
+      }
+    }
+
+    .content-modal-body {
+      max-height: calc(90vh - 80px);
+      overflow-y: auto;
+      padding: 0;
+
+      // Override component styles for modal
+      .video-player-container,
+      .audio-player-container,
+      .pdf-viewer-container,
+      .blog-content-container {
+        margin: 0;
+        border-radius: 0;
+        box-shadow: none;
+      }
+    }
+  }
+}
+
+// Responsive modal
+@media (max-width: 768px) {
+  .content-modal-overlay {
+    padding: 1rem;
+
+    .content-modal {
+      max-width: 95vw;
+      max-height: 95vh;
+
+      .content-modal-header {
+        padding: 1rem;
+
+        h2 {
+          font-size: 1.1rem;
+        }
+
+        .close-btn {
+          width: 36px;
+          height: 36px;
+
+          svg {
+            width: 20px;
+            height: 20px;
+          }
+        }
+      }
+
+      .content-modal-body {
+        max-height: calc(95vh - 70px);
+      }
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .content-modal-overlay {
+    padding: 0.5rem;
+
+    .content-modal {
+      max-width: 100vw;
+      max-height: 100vh;
+      border-radius: 0;
+
+      .content-modal-header {
+        padding: 0.75rem;
+
+        h2 {
+          font-size: 1rem;
+        }
+      }
+
+      .content-modal-body {
+        max-height: calc(100vh - 60px);
+      }
+    }
+  }
 }

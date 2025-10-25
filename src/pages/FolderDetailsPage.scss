@@ -530,3 +530,31 @@
     }
   }
 }
+
+.action-flex-row {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+}
+.auto-margin-desktop {
+  margin-left: 0;
+}
+@media (min-width: 768px) {
+  .auto-margin-desktop {
+    margin-left: auto;
+  }
+}
+@media (min-width: 768px) {
+  .action-flex-row {
+    justify-content: space-between; /* space them nicely */
+    align-self: center;
+  }
+}
+
+.action-flex-row > button,
+.action-flex-row > .btn-primary {
+  min-width: 120px;
+  white-space: nowrap;
+}

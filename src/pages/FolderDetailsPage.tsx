@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Folder, ArrowLeft, FolderPlus, Book, X } from 'lucide-react';
+import { Folder, ArrowLeft, FolderPlus, Book, X, UserCheck } from 'lucide-react';
 import { apiClient } from '../utils/api';
 import { useAuth } from '../contexts/AuthContext';
 import CreateFolderModal from '../pages/CreateFolderModal';
@@ -63,6 +63,13 @@ const FolderDetailsPage: React.FC = () => {
     const [showCreateContentModal, setShowCreateContentModal] = useState(false);
     const [selectedContent, setSelectedContent] = useState<ContentItem | null>(null);
     const [showContentModal, setShowContentModal] = useState(false);
+    const [showAccessModal, setShowAccessModal] = useState(false);
+    const [searchEmail, setSearchEmail] = useState('');
+    const [searchedUsers, setSearchedUsers] = useState<{ userId: number; email: string }[]>([]);
+    const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
+    const [accessLoading, setAccessLoading] = useState(false);
+    const [accessError, setAccessError] = useState('');
+    const [accessSuccess, setAccessSuccess] = useState(false);
 
     useEffect(() => {
         if (!isAuthenticated) {
@@ -71,27 +78,27 @@ const FolderDetailsPage: React.FC = () => {
         }
         
         let isCancelled = false;
-        
+
         const fetchFolder = async () => {
             if (!folderId || isCancelled) return;
-            setLoading(true);
-            setError('');
-            try {
-                const res = await apiClient.getFolderDetails(Number(folderId));
+        setLoading(true);
+        setError('');
+        try {
+            const res = await apiClient.getFolderDetails(Number(folderId));
                 if (!isCancelled) {
-                    if (res.error) {
-                        setError(res.error);
-                    } else {
-                        setFolder(res?.data?.data);
+            if (res.error) {
+                setError(res.error);
+            } else {
+                setFolder(res?.data?.data);
                     }
-                }
-            } catch {
+            }
+        } catch {
                 if (!isCancelled) {
-                    setError('Failed to load folder details');
-                }
+            setError('Failed to load folder details');
+        }
             }
             if (!isCancelled) {
-                setLoading(false);
+        setLoading(false);
             }
         };
         
@@ -225,14 +232,16 @@ const FolderDetailsPage: React.FC = () => {
                 <div className="folder-content">
                     {folder.description && <p className="folder-description">{folder.description}</p>}
                     {!loading && folder && folder.canEdit && (
-                        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                        <div className="action-flex-row">
                             <button className="btn-primary create-content-btn" onClick={() => setShowCreateContentModal(true)}>
-                                <Book size={20} />+ Add Content
+                                <Book size={20} />Add Content
                             </button>
                             <button className="btn-primary create-folder-btn" onClick={() => setShowCreateModal(true)}>
                                 <FolderPlus size={20} /> Create Folder
                             </button>
-                            
+                            <button className="btn-primary access-update-btn auto-margin-desktop" onClick={() => setShowAccessModal(true)}>
+                                <UserCheck size={20} style={{ marginRight: 6 }} />Access Update
+                            </button>
                         </div>
                     )}
                     {showCreateModal && (
@@ -337,8 +346,8 @@ const FolderDetailsPage: React.FC = () => {
                                                             onClick={() => handleContentClick(content)}
                                                         />
                                                     ))}
-                                                </div>
-                                            </div>
+                                    </div>
+                                </div>
                                         )}
                                         
                                         {others.length > 0 && (
@@ -375,6 +384,78 @@ const FolderDetailsPage: React.FC = () => {
                         </div>
                         <div className="content-modal-body">
                             {renderContentModal()}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showAccessModal && (
+                <div className="content-modal-overlay" onClick={() => setShowAccessModal(false)}>
+                    <div className="content-modal" style={{ minWidth: 360, maxWidth: 480, position: 'relative' }} onClick={e => e.stopPropagation()}>
+                        <div className="content-modal-header">
+                            <h2>Update Folder Access</h2>
+                            <button className="close-btn" onClick={() => setShowAccessModal(false)}><X size={24} /></button>
+                        </div>
+                        <div className="content-modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+                            <label htmlFor="search-email">Search User by Email:</label>
+                            <form style={{ display: 'flex', gap: 8 }} onSubmit={async e => {
+                                e.preventDefault();
+                                setAccessError(''); setAccessSuccess(false);
+                                setAccessLoading(true);
+                                try {
+                                    const res = await apiClient.getUserByEmail(searchEmail);
+                                    const userIdNum = Number(res.data);
+                                    if (userIdNum && !isNaN(userIdNum)) {
+                                        setSearchedUsers(prev => {
+                                            if (prev.some(u => u.userId === userIdNum)) return prev;
+                                            return [...prev, { userId: userIdNum, email: searchEmail }];
+                                        });
+                                    } else {
+                                        setAccessError(res.error || 'User not found');
+                                    }
+                                } finally { setAccessLoading(false); }
+                            }}>
+                                <input id="search-email" value={searchEmail} onChange={e => setSearchEmail(e.target.value)} type="email" required placeholder="user@example.com" className="input" style={{ flex: 1 }} />
+                                <button type="submit" disabled={accessLoading} className="btn-primary">Search</button>
+                            </form>
+                            <div>
+                                <div style={{ margin: '10px 0', fontWeight: 500 }}>Searched Users:</div>
+                                <ul style={{ paddingLeft: 0, listStyle: 'none', margin: 0 }}>
+                                    {searchedUsers.map(({ userId, email }) => (
+                                        <li key={userId} style={{ marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
+                                            <input type="checkbox" checked={selectedUserIds.includes(userId)} id={`sel-user-${userId}`} onChange={e => {
+                                                setSelectedUserIds(ids => e.target.checked ? [...ids, userId] : ids.filter(id => id !== userId));
+                                            }} />
+                                            <label htmlFor={`sel-user-${userId}`}>{email} <span style={{ marginLeft: 8, color: '#6B7280' }}>[{userId}]</span></label>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                            <button className="btn-primary" disabled={selectedUserIds.length === 0 || accessLoading} onClick={async () => {
+                                if (!folder?.folderId) {
+                                  setAccessError('Missing folder ID.');
+                                  setAccessLoading(false);
+                                  return;
+                                }
+                                setAccessLoading(true);
+                                setAccessError('');
+                                setAccessSuccess(false);
+                                try {
+                                    const result = await apiClient.folderAccessUpdate(folder.folderId, selectedUserIds);
+                                    if (result.error) {
+                                        setAccessError(result.error || 'Failed to update access.');
+                                    } else {
+                                        setAccessSuccess(true);
+                                    }
+                                } catch {
+                                    setAccessError('Could not update access.');
+                                } finally {
+                                    setAccessLoading(false);
+                                }
+                            }}>Update Access</button>
+                            {accessLoading && <div>Updating...</div>}
+                            {accessSuccess && <div style={{ color: 'green' }}>Access updated successfully!</div>}
+                            {accessError && <div style={{ color: 'red' }}>{accessError}</div>}
                         </div>
                     </div>
                 </div>

@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { usePortal } from '../contexts/PortalContext';
 import { apiClient } from '../utils/api';
-import { Folder, FolderPlus, LogOut, User } from 'lucide-react';
+import { Folder, FolderPlus, LogOut, User, Shield } from 'lucide-react';
 import './DashboardPage.scss';
 
 const DashboardPage: React.FC = () => {
@@ -24,9 +24,10 @@ const DashboardPage: React.FC = () => {
     name: '',
     description: '',
     isUniversal: false,
+    isPaid: false,
     price: '',
     accessDurationInDays: '',
-    parentFolderId: '', // for root, leave blank
+    parentFolderId: '',
   });
   const [createLoading, setCreateLoading] = useState(false);
   const [createError, setCreateError] = useState('');
@@ -48,17 +49,8 @@ const DashboardPage: React.FC = () => {
 
   useEffect(() => {
     if (!user) return;
-
-    // Get portal admins from sessionStorage
-    const portalAdmins: string[] = JSON.parse(sessionStorage.getItem('portal_admins') || '[]');
-
-    // Check if current user is in the admins list
-    console.log("user names are ", user.username);
-
-    const isAdmin = portalAdmins.includes(user.username);
-    setIsPortalAdmin(isAdmin);
-
-    console.log("isAdmin ", isAdmin);
+    const portalAdminIds: string[] = JSON.parse(sessionStorage.getItem('portal_admin_ids') || '[]');
+    setIsPortalAdmin(portalAdminIds.includes(String(user.id)));
   }, [user]);
 
   const loadFolders = async () => {
@@ -121,12 +113,12 @@ const DashboardPage: React.FC = () => {
       const folderData: any = {
         portalName: portal?.name || portal?.display_name || '',
         name: createForm.name,
-        description: createForm.description,
+        description: createForm.description || undefined,
         isUniversal: createForm.isUniversal,
-        price: createForm.price ? parseFloat(createForm.price) : undefined,
-        accessDurationInDays: createForm.accessDurationInDays ? parseInt(createForm.accessDurationInDays) : undefined,
+        price: createForm.isPaid && createForm.price ? parseFloat(createForm.price) : undefined,
+        accessDurationInDays: createForm.isPaid && createForm.accessDurationInDays ? parseInt(createForm.accessDurationInDays) : undefined,
         parentFolderId: createForm.parentFolderId ? parseInt(createForm.parentFolderId) : undefined,
-        userIds,
+        userIds: userIds.length > 0 ? userIds : undefined,
       };
 
       const res: any = await apiClient.createFolder(folderData);
@@ -142,6 +134,7 @@ const DashboardPage: React.FC = () => {
           name: '',
           description: '',
           isUniversal: false,
+          isPaid: false,
           price: '',
           accessDurationInDays: '',
           parentFolderId: '',
@@ -187,8 +180,18 @@ const DashboardPage: React.FC = () => {
             <div className="user-info">
               <User size={20} />
               <span>{user?.username}</span>
-              <span className={`role-badge role-${user?.role}`}>{user?.role}</span>
+              {(isPortalAdmin || (user?.role && user.role !== 'user')) && (
+                <span className={`role-badge role-${isPortalAdmin ? 'admin' : user?.role}`}>
+                  {isPortalAdmin ? 'ADMIN' : user?.role?.toUpperCase()}
+                </span>
+              )}
             </div>
+            {user?.role === 'super' && (
+              <button className="btn-admin" onClick={() => navigate('/admn')}>
+                <Shield size={18} />
+                Admin Panel
+              </button>
+            )}
             <button onClick={handleLogout} className="btn-logout">
               <LogOut size={20} />
               Logout
@@ -208,126 +211,177 @@ const DashboardPage: React.FC = () => {
                   Create Folder
                 </button>
                 {showCreateModal && (
-                  <div className="modal-overlay">
-                    <div className="modal">
-                      <h3>Create Folder</h3>
+                  <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) setShowCreateModal(false); }}>
+                    <div className="modal create-folder-modal">
+                      <div className="modal-header">
+                        <h3>Create Folder</h3>
+                        <button className="modal-close" type="button" onClick={() => setShowCreateModal(false)}>✕</button>
+                      </div>
+
                       <form onSubmit={handleCreateFolder}>
-                        <input
-                          type="text"
-                          placeholder="Name"
-                          value={createForm.name}
-                          onChange={e => setCreateForm(f => ({ ...f, name: e.target.value }))}
-                          required
-                        />
-                        <textarea
-                          placeholder="Description"
-                          value={createForm.description}
-                          onChange={e => setCreateForm(f => ({ ...f, description: e.target.value }))}
-                        />
-                        <label>
-                          <input
-                            type="checkbox"
-                            checked={createForm.isUniversal}
-                            onChange={e => setCreateForm(f => ({ ...f, isUniversal: e.target.checked }))}
-                          /> Universal
-                        </label>
-                        <input
-                          type="number"
-                          placeholder="Price"
-                          value={createForm.price}
-                          onChange={e => setCreateForm(f => ({ ...f, price: e.target.value }))}
-                        />
-                        <input
-                          type="number"
-                          placeholder="Access Duration (days)"
-                          value={createForm.accessDurationInDays}
-                          onChange={e => setCreateForm(f => ({ ...f, accessDurationInDays: e.target.value }))}
-                        />
+                        {/* Basic Info */}
+                        <div className="form-section">
+                          <div className="form-field">
+                            <label className="field-label">Folder Name <span className="required">*</span></label>
+                            <input
+                              type="text"
+                              placeholder="e.g. Physics Notes"
+                              value={createForm.name}
+                              onChange={e => setCreateForm(f => ({ ...f, name: e.target.value }))}
+                              required
+                            />
+                          </div>
+                          <div className="form-field">
+                            <label className="field-label">Description</label>
+                            <textarea
+                              placeholder="Brief description (optional)"
+                              value={createForm.description}
+                              onChange={e => setCreateForm(f => ({ ...f, description: e.target.value }))}
+                            />
+                          </div>
+                        </div>
 
-                        {/* Email Inputs */}
-                        <div className="emails-inputs">
-                          {emails.map((item, index) => (
-                            <div key={index} className="email-row">
-                              <input
-                                type="email"
-                                placeholder="User Email"
-                                value={item.email}
-                                onChange={e => {
-                                  const newEmails = [...emails];
-                                  newEmails[index].email = e.target.value;
-                                  newEmails[index].userId = null; // reset userId if changed
-                                  newEmails[index].error = ''; // reset previous error
-                                  setEmails(newEmails);
-                                }}
-                                onBlur={async () => {
-                                  if (!item.email || item.userId || item.loading) return; // skip if empty or already fetched
+                        {/* Access Toggles */}
+                        <div className="form-section">
+                          <p className="section-label">Access Settings</p>
 
-                                  const newEmails = [...emails];
-                                  newEmails[index].loading = true;
-                                  setEmails(newEmails);
-
-                                  try {
-                                    const res = await apiClient.getUserByEmail(item.email);
-                                    newEmails[index].loading = false;
-
-                                    if (res?.data) {
-                                      newEmails[index].userId = res.data;
-                                      newEmails[index].error = '';
-                                    } else {
-                                      newEmails[index].userId = null;
-                                      newEmails[index].error = 'User does not exist';
-                                    }
-                                  } catch (err) {
-                                    newEmails[index].loading = false;
-                                    newEmails[index].userId = null;
-                                    newEmails[index].error = 'User does not exist';
-                                  }
-
-                                  setEmails(newEmails);
-                                }}
-                                disabled={item.userId !== null} // read-only after success
-                              // removed `required` here
-                              />
-
-                              {item.loading && <span className="loading-spinner">⏳</span>}
-                              {item.error && <span className="error-message">{item.error}</span>}
-
-                              {/* Remove button */}
-                              {emails.length > 1 && (
-                                <button
-                                  type="button"
-                                  onClick={() => setEmails(emails.filter((_, i) => i !== index))}
-                                >
-                                  Remove
-                                </button>
-                              )}
+                          <div className="toggle-row">
+                            <div className="toggle-info">
+                              <span className="toggle-label">Universal Access</span>
+                              <span className="toggle-desc">Anyone in the portal can view this folder</span>
                             </div>
-                          ))}
+                            <label className="toggle-switch">
+                              <input
+                                type="checkbox"
+                                checked={createForm.isUniversal}
+                                onChange={e => setCreateForm(f => ({ ...f, isUniversal: e.target.checked }))}
+                              />
+                              <span className="toggle-slider" />
+                            </label>
+                          </div>
 
-                          {/* Add another email button only if last email has no error */}
-                          {emails[emails.length - 1]?.error === '' && (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setEmails([...emails, { email: '', userId: null, loading: false }])
-                              }
-                            >
-                              Add Another Email
-                            </button>
+                          <div className="toggle-row">
+                            <div className="toggle-info">
+                              <span className="toggle-label">Paid Access</span>
+                              <span className="toggle-desc">Require payment to access this folder</span>
+                            </div>
+                            <label className="toggle-switch">
+                              <input
+                                type="checkbox"
+                                checked={createForm.isPaid}
+                                onChange={e => setCreateForm(f => ({ ...f, isPaid: e.target.checked, price: '', accessDurationInDays: '' }))}
+                              />
+                              <span className="toggle-slider" />
+                            </label>
+                          </div>
+
+                          {createForm.isPaid && (
+                            <div className="paid-fields">
+                              <div className="form-field half">
+                                <label className="field-label">Price (₹) <span className="required">*</span></label>
+                                <input
+                                  type="number"
+                                  placeholder="0.00"
+                                  min="0"
+                                  step="0.01"
+                                  value={createForm.price}
+                                  onChange={e => setCreateForm(f => ({ ...f, price: e.target.value }))}
+                                  required={createForm.isPaid}
+                                />
+                              </div>
+                              <div className="form-field half">
+                                <label className="field-label">Access Duration (days) <span className="required">*</span></label>
+                                <input
+                                  type="number"
+                                  placeholder="e.g. 30"
+                                  min="1"
+                                  value={createForm.accessDurationInDays}
+                                  onChange={e => setCreateForm(f => ({ ...f, accessDurationInDays: e.target.value }))}
+                                  required={createForm.isPaid}
+                                />
+                              </div>
+                            </div>
                           )}
                         </div>
 
+                        {/* User Access */}
+                        <div className="form-section">
+                          <p className="section-label">Grant Admin rights to User <span className="section-optional">(optional)</span></p>
+                          <div className="emails-inputs">
+                            {emails.map((item, index) => (
+                              <div key={index} className="email-row">
+                                <div className="email-input-wrap">
+                                  <input
+                                    type="email"
+                                    placeholder="user@example.com"
+                                    value={item.email}
+                                    onChange={e => {
+                                      const newEmails = [...emails];
+                                      newEmails[index].email = e.target.value;
+                                      newEmails[index].userId = null;
+                                      newEmails[index].error = '';
+                                      setEmails(newEmails);
+                                    }}
+                                    onBlur={async () => {
+                                      if (!item.email || item.userId || item.loading) return;
+                                      const newEmails = [...emails];
+                                      newEmails[index].loading = true;
+                                      setEmails([...newEmails]);
+                                      try {
+                                        const res = await apiClient.getUserByEmail(item.email);
+                                        newEmails[index].loading = false;
+                                        if (res?.data) {
+                                          newEmails[index].userId = res.data;
+                                          newEmails[index].error = '';
+                                        } else {
+                                          newEmails[index].userId = null;
+                                          newEmails[index].error = 'User not found';
+                                        }
+                                      } catch {
+                                        newEmails[index].loading = false;
+                                        newEmails[index].userId = null;
+                                        newEmails[index].error = 'User not found';
+                                      }
+                                      setEmails([...newEmails]);
+                                    }}
+                                    disabled={item.userId !== null}
+                                  />
+                                  {item.loading && <span className="field-status loading">Checking...</span>}
+                                  {item.userId !== null && !item.loading && <span className="field-status success">✓ Found</span>}
+                                  {item.error && <span className="field-status error">{item.error}</span>}
+                                </div>
+                                {emails.length > 1 && (
+                                  <button
+                                    type="button"
+                                    className="btn-remove"
+                                    onClick={() => setEmails(emails.filter((_, i) => i !== index))}
+                                  >✕</button>
+                                )}
+                              </div>
+                            ))}
+                            {emails[emails.length - 1]?.error === '' && (
+                              <button
+                                type="button"
+                                className="btn-add-email"
+                                onClick={() => setEmails([...emails, { email: '', userId: null, loading: false }])}
+                              >
+                                + Add another email
+                              </button>
+                            )}
+                          </div>
+                        </div>
 
-
-                        <button type="submit" className="btn-primary" disabled={createLoading}>
-                          {createLoading ? 'Creating...' : 'Create'}
-                        </button>
-                        <button type="button" className="btn-secondary" onClick={() => setShowCreateModal(false)}>
-                          Cancel
-                        </button>
                         {createError && <div className="error-message">{createError}</div>}
-                      </form>
 
+                        <div className="modal-actions">
+                          <button type="button" className="btn-secondary" onClick={() => setShowCreateModal(false)}>
+                            Cancel
+                          </button>
+                          <button type="submit" className="btn-primary" disabled={createLoading}>
+                            {createLoading ? 'Creating...' : 'Create Folder'}
+                          </button>
+                        </div>
+                      </form>
                     </div>
                   </div>
                 )}

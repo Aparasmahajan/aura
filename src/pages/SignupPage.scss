@@ -81,9 +81,25 @@
           cursor: not-allowed;
         }
 
-        &::placeholder {
-          color: #a0aec0;
+        &.input-error {
+          border-color: #e53e3e;
+          box-shadow: 0 0 0 3px rgba(229, 62, 62, 0.1);
         }
+      }
+
+      .field-error {
+        display: block;
+        margin-top: 0.4rem;
+        font-size: 0.82rem;
+        color: #e53e3e;
+        font-weight: 500;
+      }
+
+      .field-hint {
+        display: block;
+        margin-top: 0.4rem;
+        font-size: 0.82rem;
+        color: #94a3b8;
       }
     }
 

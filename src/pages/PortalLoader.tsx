@@ -15,7 +15,7 @@ const PortalLoader: React.FC = () => {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (portalName) {
+    if (portalName && portalName !== 'admn') {
       loadPortal();
     }
 
@@ -54,13 +54,11 @@ const PortalLoader: React.FC = () => {
 
     setPortal(mapped);
 
-    // Store admin usernames in sessionStorage
-    const adminUsernames: string[] = Array.isArray(apiPortal.admins)
-      ? apiPortal.admins.map((admin: any) =>
-          typeof admin === 'string' ? admin : admin.username
-        )
+    // Store admin userIds in sessionStorage
+    const adminIds: string[] = Array.isArray(apiPortal.admins)
+      ? apiPortal.admins.map((admin: any) => String(admin.userId ?? admin.id))
       : [];
-    sessionStorage.setItem('portal_admins', JSON.stringify(adminUsernames));
+    sessionStorage.setItem('portal_admin_ids', JSON.stringify(adminIds));
 
     setIsLoading(false);
 

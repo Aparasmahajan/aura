@@ -7,6 +7,7 @@ import SignupPage from './pages/SignupPage';
 import DashboardPage from './pages/DashboardPage';
 import HomePage from './pages/HomePage';
 import FolderDetailsPage from './pages/FolderDetailsPage';
+import SuperAdminPage from './pages/SuperAdminPage';
 
 function App() {
   return (
@@ -15,12 +16,13 @@ function App() {
         <PortalProvider>
           <Routes>
             <Route path="/" element={<HomePage />} />
+            <Route path="/admn" element={<SuperAdminPage />} />
             <Route path="/:portalName" element={<PortalLoader />}>
               <Route index element={<Navigate to="login" replace />} />
               <Route path="login" element={<LoginPage />} />
               <Route path="signup" element={<SignupPage />} />
               <Route path="dashboard" element={<DashboardPage />} />
-              <Route path="folder/:folderId" element={<FolderDetailsPage />} /> 
+              <Route path="folder/:folderId" element={<FolderDetailsPage />} />
             </Route>
           </Routes>
         </PortalProvider>

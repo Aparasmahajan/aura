@@ -44,7 +44,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   if (response.data) {
     const { token, username, email, roles } = response.data;
-    const role = roles && roles.length > 0 ? roles[0].name : 'user'; // pick the first role
+    const role = roles && roles.length > 0 ? roles[0].name.toLowerCase() : 'user';
     // Fallback to decoded JWT userId if roles is empty
     let id = '';
     if (roles && roles.length > 0 && roles[0].roleId) {
@@ -87,6 +87,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     if (response.data?.user) {
       setUser(response.data.user);
+      return { success: true };
+    }
+
+    if (response.data) {
       return { success: true };
     }
 

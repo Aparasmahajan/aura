@@ -6,6 +6,7 @@ import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import DashboardPage from './pages/DashboardPage';
 import HomePage from './pages/HomePage';
+import FolderDetailsPage from './pages/FolderDetailsPage';
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
               <Route path="login" element={<LoginPage />} />
               <Route path="signup" element={<SignupPage />} />
               <Route path="dashboard" element={<DashboardPage />} />
+              <Route path="folder/:folderId" element={<FolderDetailsPage />} /> 
             </Route>
           </Routes>
         </PortalProvider>

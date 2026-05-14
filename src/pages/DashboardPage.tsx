@@ -380,6 +380,8 @@ interface FolderCardProps {
 const FolderCard: React.FC<FolderCardProps> = ({ folder, subfolders }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const canOpen = folder.canEdit || folder.isUniversal;
+  const navigate = useNavigate();
+  const { portalName } = useParams<{ portalName: string }>();
 
   return (
     <div className="folder-card">
@@ -387,7 +389,8 @@ const FolderCard: React.FC<FolderCardProps> = ({ folder, subfolders }) => {
         className="folder-header"
         onClick={() => {
           if (!canOpen) return;
-          setIsExpanded(!isExpanded);
+          // navigate to FolderDetailsPage
+          navigate(`/${portalName}/folder/${folder.id}`);
         }}
         style={!canOpen ? { cursor: 'not-allowed', opacity: 0.7 } : undefined}
       >
@@ -412,7 +415,11 @@ const FolderCard: React.FC<FolderCardProps> = ({ folder, subfolders }) => {
       {subfolders.length > 0 && isExpanded && (
         <div className="subfolders">
           {subfolders.map(subfolder => (
-            <div key={subfolder.id} className="subfolder-item">
+            <div
+              key={subfolder.id}
+              className="subfolder-item"
+              onClick={() => navigate(`/${portalName}/folder/${subfolder.id}`)}
+            >
               <Folder size={18} />
               <span>{subfolder.name}</span>
               {subfolder.canEdit && <span className="permission-badge small">Edit</span>}

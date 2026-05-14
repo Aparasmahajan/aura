@@ -249,6 +249,28 @@ async getUserByEmail(email: string): Promise<ApiResponse<number>> {
   }
 }
 
+async folderAccessUpdate(folderId: number, userIds: number[]): Promise<ApiResponse> {
+  try {
+    const userId = this.getAuthUserId();
+    const token = this.getAuthToken();
+    const response = await fetch(`http://localhost:9091/content/folderAccessUpdate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(userId ? { 'userId': userId } : {}),
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify({ folderId, userIds })
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      return { error: data.error || 'Failed to update folder access', message: data.message };
+    }
+    return { data };
+  } catch (err) {
+    return { error: 'Network error. Could not update folder access' };
+  }
+}
 
   logout(): void {
     sessionStorage.removeItem('jwt_token');

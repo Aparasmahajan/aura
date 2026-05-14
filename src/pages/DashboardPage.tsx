@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { usePortal } from '../contexts/PortalContext';
@@ -16,6 +16,9 @@ const DashboardPage: React.FC = () => {
   >([{ email: '', userId: null, loading: false }]);
 
 
+
+  const loadedPortalIdRef = useRef<string | null>(null);
+  const isFetchingRef = useRef(false);
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -44,6 +47,9 @@ const DashboardPage: React.FC = () => {
       return;
     }
 
+    // Skip if already fetched for this portal or a fetch is in-flight
+    if (portal.id === loadedPortalIdRef.current || isFetchingRef.current) return;
+
     loadFolders();
   }, [isAuthenticated, portal]);
 
@@ -54,8 +60,9 @@ const DashboardPage: React.FC = () => {
   }, [user]);
 
   const loadFolders = async () => {
-    if (!portal) return;
+    if (!portal || isFetchingRef.current) return;
 
+    isFetchingRef.current = true;
     setIsLoading(true);
     setError('');
 
@@ -64,6 +71,7 @@ const DashboardPage: React.FC = () => {
     if (response.error) {
       setError(response.error);
       setIsLoading(false);
+      isFetchingRef.current = false;
       return;
     }
 
@@ -86,6 +94,8 @@ const DashboardPage: React.FC = () => {
       // setIsPortalAdmin(false);
     }
 
+    loadedPortalIdRef.current = portal.id;
+    isFetchingRef.current = false;
     setIsLoading(false);
   };
 

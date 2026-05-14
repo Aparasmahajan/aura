@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Folder, ArrowLeft, FolderPlus, Book, X, UserCheck } from 'lucide-react';
+import { Folder, ArrowLeft, FolderPlus, Book, X, UserCheck, Trash2, Shield } from 'lucide-react';
 import { apiClient } from '../utils/api';
 import { useAuth } from '../contexts/AuthContext';
 import CreateFolderModal from '../pages/CreateFolderModal';
@@ -63,13 +63,18 @@ const FolderDetailsPage: React.FC = () => {
     const [showCreateContentModal, setShowCreateContentModal] = useState(false);
     const [selectedContent, setSelectedContent] = useState<ContentItem | null>(null);
     const [showContentModal, setShowContentModal] = useState(false);
+    const [isPortalAdmin, setIsPortalAdmin] = useState(false);
     const [showAccessModal, setShowAccessModal] = useState(false);
-    const [searchEmail, setSearchEmail] = useState('');
-    const [searchedUsers, setSearchedUsers] = useState<{ userId: number; email: string }[]>([]);
-    const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
+    const [accessUsers, setAccessUsers] = useState<{ userId: number; email: string }[]>([]);
+    const [accessEmailInput, setAccessEmailInput] = useState('');
+    const [accessEmailLoading, setAccessEmailLoading] = useState(false);
+    const [accessEmailError, setAccessEmailError] = useState('');
     const [accessLoading, setAccessLoading] = useState(false);
     const [accessError, setAccessError] = useState('');
     const [accessSuccess, setAccessSuccess] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [deleteLoading, setDeleteLoading] = useState(false);
+    const [deleteError, setDeleteError] = useState('');
 
     useEffect(() => {
         if (!isAuthenticated) {
@@ -109,6 +114,58 @@ const FolderDetailsPage: React.FC = () => {
         };
     }, [folderId, isAuthenticated]);
 
+
+    useEffect(() => {
+        if (!user) return;
+        const ids: string[] = JSON.parse(sessionStorage.getItem('portal_admin_ids') || '[]');
+        setIsPortalAdmin(ids.includes(String(user.id)));
+    }, [user]);
+
+    const canManage = isPortalAdmin || !!folder?.canEdit;
+
+    const handleDelete = async () => {
+        if (!folder) return;
+        setDeleteLoading(true);
+        setDeleteError('');
+        const res = await apiClient.deleteFolder(folder.folderId);
+        setDeleteLoading(false);
+        if (res.error) {
+            setDeleteError(res.error);
+        } else {
+            navigate(-1);
+        }
+    };
+
+    const handleAccessEmailAdd = async () => {
+        if (!accessEmailInput) return;
+        setAccessEmailLoading(true);
+        setAccessEmailError('');
+        const res = await apiClient.getUserByEmail(accessEmailInput);
+        setAccessEmailLoading(false);
+        if (res?.data) {
+            const uid = Number(res.data);
+            if (!accessUsers.some(u => u.userId === uid)) {
+                setAccessUsers(prev => [...prev, { userId: uid, email: accessEmailInput }]);
+            }
+            setAccessEmailInput('');
+        } else {
+            setAccessEmailError(res.error || 'User not found');
+        }
+    };
+
+    const handleAccessSubmit = async () => {
+        if (!folder?.folderId || accessUsers.length === 0) return;
+        setAccessLoading(true);
+        setAccessError('');
+        setAccessSuccess(false);
+        const res = await apiClient.folderAccessUpdate(folder.folderId, accessUsers.map(u => u.userId));
+        setAccessLoading(false);
+        if (res.error) {
+            setAccessError(res.error);
+        } else {
+            setAccessSuccess(true);
+        }
+    };
 
     const handleOpenFolder = (id: number) => {
         navigate(`/${portalName}/folder/${id}`);
@@ -206,8 +263,10 @@ const FolderDetailsPage: React.FC = () => {
                     <div className="user-section">
                         <div className="user-info">
                             <span>{user?.username}</span>
-                            {user?.role && (
-                                <span className={`role-badge role-${user.role}`}>{user.role}</span>
+                            {(isPortalAdmin || (user?.role && user.role !== 'user')) && (
+                                <span className={`role-badge role-${isPortalAdmin ? 'admin' : user?.role}`}>
+                                    {isPortalAdmin ? 'ADMIN' : user?.role?.toUpperCase()}
+                                </span>
                             )}
                         </div>
                         <button className="btn-logout" onClick={logout}>Logout</button>
@@ -231,17 +290,38 @@ const FolderDetailsPage: React.FC = () => {
             ) : folder ? (
                 <div className="folder-content">
                     {folder.description && <p className="folder-description">{folder.description}</p>}
-                    {!loading && folder && folder.canEdit && (
+                    {!loading && folder && canManage && (
                         <div className="action-flex-row">
-                            <button className="btn-primary create-content-btn" onClick={() => setShowCreateContentModal(true)}>
-                                <Book size={20} />Add Content
+                            {folder.canEdit && (
+                                <>
+                                    <button className="btn-action btn-content" onClick={() => setShowCreateContentModal(true)}>
+                                        <Book size={17} /> Add Content
+                                    </button>
+                                    <button className="btn-action btn-folder" onClick={() => setShowCreateModal(true)}>
+                                        <FolderPlus size={17} /> Create Subfolder
+                                    </button>
+                                </>
+                            )}
+                            <button className="btn-action btn-access" onClick={() => { setShowAccessModal(true); setAccessSuccess(false); setAccessError(''); }}>
+                                <Shield size={17} /> Manage Folder Admin
                             </button>
-                            <button className="btn-primary create-folder-btn" onClick={() => setShowCreateModal(true)}>
-                                <FolderPlus size={20} /> Create Folder
+                            <button className="btn-action btn-delete" onClick={() => setShowDeleteConfirm(true)}>
+                                <Trash2 size={17} /> Delete Folder
                             </button>
-                            <button className="btn-primary access-update-btn auto-margin-desktop" onClick={() => setShowAccessModal(true)}>
-                                <UserCheck size={20} style={{ marginRight: 6 }} />Access Update
-                            </button>
+                        </div>
+                    )}
+
+                    {/* Delete confirmation */}
+                    {showDeleteConfirm && (
+                        <div className="delete-confirm-bar">
+                            <span>Delete <strong>{folder?.name}</strong>? This cannot be undone.</span>
+                            <div className="confirm-actions">
+                                <button className="btn-confirm-cancel" onClick={() => { setShowDeleteConfirm(false); setDeleteError(''); }}>Cancel</button>
+                                <button className="btn-confirm-delete" onClick={handleDelete} disabled={deleteLoading}>
+                                    {deleteLoading ? 'Deleting...' : 'Yes, Delete'}
+                                </button>
+                            </div>
+                            {deleteError && <span className="delete-error">{deleteError}</span>}
                         </div>
                     )}
                     {showCreateModal && (
@@ -390,72 +470,75 @@ const FolderDetailsPage: React.FC = () => {
             )}
 
             {showAccessModal && (
-                <div className="content-modal-overlay" onClick={() => setShowAccessModal(false)}>
-                    <div className="content-modal" style={{ minWidth: 360, maxWidth: 480, position: 'relative' }} onClick={e => e.stopPropagation()}>
-                        <div className="content-modal-header">
-                            <h2>Update Folder Access</h2>
-                            <button className="close-btn" onClick={() => setShowAccessModal(false)}><X size={24} /></button>
-                        </div>
-                        <div className="content-modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-                            <label htmlFor="search-email">Search User by Email:</label>
-                            <form style={{ display: 'flex', gap: 8 }} onSubmit={async e => {
-                                e.preventDefault();
-                                setAccessError(''); setAccessSuccess(false);
-                                setAccessLoading(true);
-                                try {
-                                    const res = await apiClient.getUserByEmail(searchEmail);
-                                    const userIdNum = Number(res.data);
-                                    if (userIdNum && !isNaN(userIdNum)) {
-                                        setSearchedUsers(prev => {
-                                            if (prev.some(u => u.userId === userIdNum)) return prev;
-                                            return [...prev, { userId: userIdNum, email: searchEmail }];
-                                        });
-                                    } else {
-                                        setAccessError(res.error || 'User not found');
-                                    }
-                                } finally { setAccessLoading(false); }
-                            }}>
-                                <input id="search-email" value={searchEmail} onChange={e => setSearchEmail(e.target.value)} type="email" required placeholder="user@example.com" className="input" style={{ flex: 1 }} />
-                                <button type="submit" disabled={accessLoading} className="btn-primary">Search</button>
-                            </form>
+                <div className="access-modal-overlay" onClick={e => { if (e.target === e.currentTarget) setShowAccessModal(false); }}>
+                    <div className="access-modal">
+                        <div className="access-modal-header">
                             <div>
-                                <div style={{ margin: '10px 0', fontWeight: 500 }}>Searched Users:</div>
-                                <ul style={{ paddingLeft: 0, listStyle: 'none', margin: 0 }}>
-                                    {searchedUsers.map(({ userId, email }) => (
-                                        <li key={userId} style={{ marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
-                                            <input type="checkbox" checked={selectedUserIds.includes(userId)} id={`sel-user-${userId}`} onChange={e => {
-                                                setSelectedUserIds(ids => e.target.checked ? [...ids, userId] : ids.filter(id => id !== userId));
-                                            }} />
-                                            <label htmlFor={`sel-user-${userId}`}>{email} <span style={{ marginLeft: 8, color: '#6B7280' }}>[{userId}]</span></label>
-                                        </li>
-                                    ))}
-                                </ul>
+                                <h3>Manage Folder Admin</h3>
+                                <p className="access-modal-sub">Grant edit access to users for <strong>{folder?.name}</strong></p>
                             </div>
-                            <button className="btn-primary" disabled={selectedUserIds.length === 0 || accessLoading} onClick={async () => {
-                                if (!folder?.folderId) {
-                                  setAccessError('Missing folder ID.');
-                                  setAccessLoading(false);
-                                  return;
-                                }
-                                setAccessLoading(true);
-                                setAccessError('');
-                                setAccessSuccess(false);
-                                try {
-                                    const result = await apiClient.folderAccessUpdate(folder.folderId, selectedUserIds);
-                                    if (result.error) {
-                                        setAccessError(result.error || 'Failed to update access.');
-                                    } else {
-                                        setAccessSuccess(true);
-                                    }
-                                } catch {
-                                    setAccessError('Could not update access.');
-                                } finally {
-                                    setAccessLoading(false);
-                                }
-                            }}>Update Access</button>
-                            {accessLoading && <div>Updating...</div>}
-                            {accessSuccess && <div style={{ color: 'green' }}>Access updated successfully!</div>}
-                            {accessError && <div style={{ color: 'red' }}>{accessError}</div>}
+                            <button className="modal-close-btn" onClick={() => setShowAccessModal(false)}><X size={18} /></button>
+                        </div>
+
+                        <div className="access-modal-body">
+                            {/* Email search */}
+                            <div className="access-search-row">
+                                <input
+                                    type="email"
+                                    className="access-email-input"
+                                    placeholder="Add user by email..."
+                                    value={accessEmailInput}
+                                    onChange={e => { setAccessEmailInput(e.target.value); setAccessEmailError(''); }}
+                                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAccessEmailAdd(); } }}
+                                    disabled={accessEmailLoading}
+                                />
+                                <button
+                                    className="btn-add-user"
+                                    onClick={handleAccessEmailAdd}
+                                    disabled={accessEmailLoading || !accessEmailInput}
+                                >
+                                    {accessEmailLoading ? '...' : '+ Add'}
+                                </button>
+                            </div>
+                            {accessEmailError && <p className="access-field-error">{accessEmailError}</p>}
+
+                            {/* Users list */}
+                            {accessUsers.length > 0 ? (
+                                <div className="access-users-list">
+                                    <p className="access-list-label">Users to grant access ({accessUsers.length})</p>
+                                    {accessUsers.map(({ userId, email }) => (
+                                        <div key={userId} className="access-user-row">
+                                            <div className="access-user-avatar">{email[0].toUpperCase()}</div>
+                                            <span className="access-user-email">{email}</span>
+                                            <button
+                                                className="access-user-remove"
+                                                onClick={() => setAccessUsers(prev => prev.filter(u => u.userId !== userId))}
+                                            >
+                                                <X size={14} />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="access-empty">
+                                    <UserCheck size={32} />
+                                    <p>Add users above to grant them edit access</p>
+                                </div>
+                            )}
+
+                            {accessSuccess && <div className="access-success">Access updated successfully!</div>}
+                            {accessError && <div className="access-error-msg">{accessError}</div>}
+                        </div>
+
+                        <div className="access-modal-footer">
+                            <button className="btn-access-cancel" onClick={() => setShowAccessModal(false)}>Cancel</button>
+                            <button
+                                className="btn-access-save"
+                                onClick={handleAccessSubmit}
+                                disabled={accessUsers.length === 0 || accessLoading}
+                            >
+                                {accessLoading ? 'Saving...' : `Save Access (${accessUsers.length})`}
+                            </button>
                         </div>
                     </div>
                 </div>

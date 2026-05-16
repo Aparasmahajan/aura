@@ -1,10 +1,13 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, lazy, Suspense } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { usePortal } from '../contexts/PortalContext';
 import { apiClient } from '../utils/api';
-import { Folder, FolderPlus, LogOut, User, Shield } from 'lucide-react';
+import { Folder, FolderPlus, LogOut, User, Shield, UserPlus, X, AlertCircle, CheckCircle } from 'lucide-react';
 import './DashboardPage.scss';
+
+const SubAdminPanel = lazy(() => import('./SubAdminPanel'));
+const AdministratorPanel = lazy(() => import('./AdministratorPanel'));
 
 const DashboardPage: React.FC = () => {
   const { portalName } = useParams<{ portalName: string }>();
@@ -34,6 +37,23 @@ const DashboardPage: React.FC = () => {
   });
   const [createLoading, setCreateLoading] = useState(false);
   const [createError, setCreateError] = useState('');
+
+  // Student onboarding
+  const [showOnboardModal, setShowOnboardModal] = useState(false);
+  const [onboardForm, setOnboardForm] = useState({
+    username: '', email: '', password: '', fullName: '',
+    enrollmentNo: '', course: '', yearSemester: '', phone: '',
+  });
+  const [onboardLoading, setOnboardLoading] = useState(false);
+  const [onboardError, setOnboardError] = useState('');
+  const [onboardSuccess, setOnboardSuccess] = useState('');
+
+  // Students never land here — send them to their portal
+  useEffect(() => {
+    if (user?.role === 'student') {
+      navigate(`/${portalName}/student/home`, { replace: true });
+    }
+  }, [user?.role]);
 
   useEffect(() => {
     const hasToken = apiClient.isAuthenticated();
@@ -169,8 +189,44 @@ const DashboardPage: React.FC = () => {
     return folders.filter(f => f.parent_id === parentId);
   };
 
-  const canCreateFolders = user?.role === 'super' || isPortalAdmin ;
-  console.log("canCreateFolders ", canCreateFolders);
+  const canCreateFolders = user?.role === 'super' || isPortalAdmin;
+
+  const canOnboardStudents =
+    user?.role === 'super' || user?.role === 'admin' ||
+    user?.role === 'sub_admin' || user?.role === 'administrator';
+
+  const handleOnboard = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setOnboardLoading(true);
+    setOnboardError('');
+    setOnboardSuccess('');
+    const res = await apiClient.onboardStudent({
+      ...onboardForm,
+      portalId: portal?.id,
+      folderIds: [],
+    });
+    setOnboardLoading(false);
+    if (res.error) { setOnboardError(res.error); return; }
+    setOnboardSuccess(`Student "${onboardForm.username}" created successfully!`);
+    setOnboardForm({ username: '', email: '', password: '', fullName: '', enrollmentNo: '', course: '', yearSemester: '', phone: '' });
+  };
+
+  // Role-based panel rendering — only admin/super see full folder dashboard
+  if (user?.role === 'sub_admin') {
+    return (
+      <Suspense fallback={<div className="page-loading"><div className="spinner" /></div>}>
+        <SubAdminPanel />
+      </Suspense>
+    );
+  }
+
+  if (user?.role === 'administrator') {
+    return (
+      <Suspense fallback={<div className="page-loading"><div className="spinner" /></div>}>
+        <AdministratorPanel />
+      </Suspense>
+    );
+  }
 
   return (
     <div className="dashboard-page">
@@ -190,12 +246,18 @@ const DashboardPage: React.FC = () => {
             <div className="user-info">
               <User size={20} />
               <span>{user?.username}</span>
-              {(isPortalAdmin || (user?.role && user.role !== 'user')) && (
+              {(isPortalAdmin || (user?.role && user.role !== 'student')) && (
                 <span className={`role-badge role-${isPortalAdmin ? 'admin' : user?.role}`}>
-                  {isPortalAdmin ? 'ADMIN' : user?.role?.toUpperCase()}
+                  {isPortalAdmin ? 'ADMIN' : user?.role?.toUpperCase().replace('_', ' ')}
                 </span>
               )}
             </div>
+            {canOnboardStudents && (
+              <button className="btn-onboard" onClick={() => setShowOnboardModal(true)}>
+                <UserPlus size={17} />
+                Onboard Student
+              </button>
+            )}
             {user?.role === 'super' && (
               <button className="btn-admin" onClick={() => navigate('/admn')}>
                 <Shield size={18} />
@@ -432,6 +494,70 @@ const DashboardPage: React.FC = () => {
           )}
         </div>
       </main>
+
+      {/* Student onboarding modal */}
+      {showOnboardModal && (
+        <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) setShowOnboardModal(false); }}>
+          <div className="modal onboard-modal">
+            <div className="modal-header">
+              <h3>Onboard Student</h3>
+              <button className="modal-close" type="button" onClick={() => { setShowOnboardModal(false); setOnboardError(''); setOnboardSuccess(''); }}>
+                <X size={18} />
+              </button>
+            </div>
+            <form onSubmit={handleOnboard}>
+              <div className="onboard-grid">
+                <div className="form-field">
+                  <label className="field-label">Username *</label>
+                  <input required value={onboardForm.username} onChange={e => setOnboardForm(f => ({ ...f, username: e.target.value }))} placeholder="username" />
+                </div>
+                <div className="form-field">
+                  <label className="field-label">Email *</label>
+                  <input required type="email" value={onboardForm.email} onChange={e => setOnboardForm(f => ({ ...f, email: e.target.value }))} placeholder="student@example.com" />
+                </div>
+                <div className="form-field">
+                  <label className="field-label">Password *</label>
+                  <input required type="password" value={onboardForm.password} onChange={e => setOnboardForm(f => ({ ...f, password: e.target.value }))} placeholder="Temporary password" />
+                </div>
+                <div className="form-field">
+                  <label className="field-label">Full Name</label>
+                  <input value={onboardForm.fullName} onChange={e => setOnboardForm(f => ({ ...f, fullName: e.target.value }))} placeholder="Full name" />
+                </div>
+                <div className="form-field">
+                  <label className="field-label">Enrollment No.</label>
+                  <input value={onboardForm.enrollmentNo} onChange={e => setOnboardForm(f => ({ ...f, enrollmentNo: e.target.value }))} placeholder="e.g. 2024CS001" />
+                </div>
+                <div className="form-field">
+                  <label className="field-label">Course / Program</label>
+                  <input value={onboardForm.course} onChange={e => setOnboardForm(f => ({ ...f, course: e.target.value }))} placeholder="e.g. B.Tech CSE" />
+                </div>
+                <div className="form-field">
+                  <label className="field-label">Year / Semester</label>
+                  <input value={onboardForm.yearSemester} onChange={e => setOnboardForm(f => ({ ...f, yearSemester: e.target.value }))} placeholder="e.g. 2nd Year / Sem 3" />
+                </div>
+                <div className="form-field">
+                  <label className="field-label">Phone</label>
+                  <input type="tel" value={onboardForm.phone} onChange={e => setOnboardForm(f => ({ ...f, phone: e.target.value }))} placeholder="Phone number" />
+                </div>
+              </div>
+
+              {onboardError && (
+                <div className="onboard-error"><AlertCircle size={14} /> {onboardError}</div>
+              )}
+              {onboardSuccess && (
+                <div className="onboard-success"><CheckCircle size={14} /> {onboardSuccess}</div>
+              )}
+
+              <div className="modal-actions">
+                <button type="button" className="btn-secondary" onClick={() => setShowOnboardModal(false)}>Cancel</button>
+                <button type="submit" className="btn-primary" disabled={onboardLoading}>
+                  {onboardLoading ? 'Creating...' : 'Create Student Account'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

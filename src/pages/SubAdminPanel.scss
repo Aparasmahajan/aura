@@ -1,0 +1,274 @@
+.sub-admin-panel {
+  max-width: 960px;
+  padding: 28px 32px;
+  font-family: 'Inter', sans-serif;
+}
+
+.panel-header {
+  margin-bottom: 22px;
+  h1 { font-size: 1.5rem; font-weight: 700; color: #1e293b; margin: 0 0 4px; }
+  p  { color: #64748b; font-size: 0.9rem; margin: 0; }
+}
+
+// ── Tabs ────────────────────────────────────────────────
+.panel-tabs {
+  display: flex;
+  gap: 4px;
+  background: #f1f5f9;
+  border-radius: 10px;
+  padding: 4px;
+  margin-bottom: 24px;
+  width: fit-content;
+}
+
+.panel-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 7px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s;
+
+  &.active { background: #fff; color: #0ea5e9; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+  &:hover:not(.active) { color: #1e293b; }
+}
+
+// ── Owned folders ────────────────────────────────────────
+.owned-folders-list { display: flex; flex-direction: column; gap: 12px; }
+
+.owned-folder-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px 18px;
+  gap: 14px;
+}
+
+.ofc-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 1;
+  cursor: pointer;
+
+  .folder-icon { color: #f59e0b; flex-shrink: 0; }
+
+  h3 { margin: 0 0 2px; font-size: 0.97rem; font-weight: 700; color: #1e293b; }
+  p  { margin: 0; font-size: 0.8rem; color: #64748b; }
+
+  &:hover h3 { color: #0ea5e9; }
+}
+
+.ofc-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ofc-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #f1f5f9;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s;
+  &:hover { background: #0ea5e9; color: #fff; }
+}
+
+.arrow { color: #94a3b8; cursor: pointer; }
+
+// ── Announcements ────────────────────────────────────────
+.news-actions-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 16px;
+}
+
+.btn-post-news {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #0ea5e9;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 9px 18px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  &:hover { background: #0284c7; }
+}
+
+.news-items { display: flex; flex-direction: column; gap: 10px; }
+
+.news-item {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 14px 16px;
+
+  &.pinned { border-color: #fbbf24; background: #fffbeb; }
+}
+
+.ni-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.ni-title {
+  font-size: 0.93rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.ni-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pin-chip    { font-size: 0.72rem; font-weight: 700; background: #fef9c3; color: #854d0e; padding: 2px 8px; border-radius: 999px; }
+.scope-chip  { font-size: 0.72rem; font-weight: 600; padding: 2px 8px; border-radius: 999px;
+  &.folder { background: #dbeafe; color: #1d4ed8; }
+  &.global { background: #f1f5f9; color: #475569; }
+}
+.ni-time     { font-size: 0.75rem; color: #94a3b8; }
+
+.btn-del-news {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #94a3b8;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  &:hover { color: #ef4444; }
+}
+
+.ni-body { font-size: 0.87rem; color: #475569; margin: 0; white-space: pre-wrap; }
+
+// ── News form modal ──────────────────────────────────────
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.news-form-modal {
+  background: #fff;
+  border-radius: 14px;
+  width: 520px;
+  max-width: 96vw;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+}
+
+.nfm-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 22px 14px;
+  border-bottom: 1px solid #f1f5f9;
+  h3 { margin: 0; font-size: 1rem; font-weight: 700; color: #1e293b; }
+  button { background: none; border: none; cursor: pointer; color: #64748b; &:hover { color: #ef4444; } }
+}
+
+.nfm-body {
+  padding: 18px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  label { font-size: 0.8rem; font-weight: 600; color: #475569; }
+  input, textarea, select {
+    border: 1px solid #e2e8f0;
+    border-radius: 7px;
+    padding: 9px 12px;
+    font-size: 0.88rem;
+    outline: none;
+    font-family: inherit;
+    transition: border-color 0.15s;
+    resize: vertical;
+    background: #fff;
+    &:focus { border-color: #0ea5e9; }
+  }
+}
+
+.toggle-label-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem !important;
+  cursor: pointer;
+  input[type="checkbox"] { width: 15px; height: 15px; }
+}
+
+.form-error { color: #ef4444; font-size: 0.83rem; margin: 0; }
+
+.nfm-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 22px 18px;
+  border-top: 1px solid #f1f5f9;
+
+  .btn-cancel {
+    background: #f1f5f9; border: none; border-radius: 7px; padding: 8px 16px; font-size: 0.86rem; cursor: pointer;
+    &:hover { background: #e2e8f0; }
+  }
+  .btn-post {
+    background: #0ea5e9; color: #fff; border: none; border-radius: 7px; padding: 8px 18px; font-size: 0.86rem; font-weight: 600; cursor: pointer;
+    &:hover { background: #0284c7; }
+    &:disabled { background: #94a3b8; cursor: not-allowed; }
+  }
+}
+
+// shared utils
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 50px 20px;
+  color: #94a3b8;
+  svg { color: #cbd5e1; }
+  p { margin: 0; font-size: 0.93rem; }
+}
+
+.spinner-center {
+  display: flex;
+  justify-content: center;
+  padding: 50px 0;
+  .spinner {
+    width: 34px;
+    height: 34px;
+    border: 3px solid #e2e8f0;
+    border-top-color: #0ea5e9;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }

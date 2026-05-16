@@ -777,4 +777,96 @@
     align-items: flex-end;
     padding: 0;
   }
+
+  .btn-onboard {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #8b5cf6;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+    &:hover { background: #7c3aed; }
+  }
+
+  .page-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    .spinner {
+      width: 36px;
+      height: 36px;
+      border: 3px solid #e2e8f0;
+      border-top-color: #667eea;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  }
+}
+
+// ── Onboard modal extras (outside .dashboard-page scope) ──
+.onboard-modal {
+  max-width: 560px;
+  width: 100%;
+}
+
+.onboard-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  .field-label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #475569;
+  }
+
+  input {
+    border: 1px solid #e2e8f0;
+    border-radius: 7px;
+    padding: 8px 11px;
+    font-size: 0.87rem;
+    outline: none;
+    transition: border-color 0.15s;
+    font-family: inherit;
+    &:focus { border-color: #667eea; }
+  }
+}
+
+.onboard-error {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #ef4444;
+  font-size: 0.83rem;
+  background: #fee2e2;
+  border-radius: 7px;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+}
+
+.onboard-success {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #166534;
+  font-size: 0.83rem;
+  background: #dcfce7;
+  border-radius: 7px;
+  padding: 8px 12px;
+  margin-bottom: 10px;
 }

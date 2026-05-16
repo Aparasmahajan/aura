@@ -22,12 +22,11 @@ const LoginPage: React.FC = () => {
 
     const result = await login(username, password);
 
-    if (result.message === 'Username not found') {
-      navigate(`/${portalName}/signup`);
-      return;
-    }
-
     if (!result.success) {
+      if (result.error === 'Username not found') {
+        navigate(`/${portalName}/signup`);
+        return;
+      }
       setError(result.error || 'Login failed');
       setIsLoading(false);
       return;

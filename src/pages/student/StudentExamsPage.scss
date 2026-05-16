@@ -1,0 +1,108 @@
+.student-exams {
+  max-width: 860px;
+}
+
+.error-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fee2e2;
+  color: #991b1b;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 0.88rem;
+  margin-bottom: 16px;
+}
+
+.exams-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.exam-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: border-color 0.15s;
+
+  &.exam-open   { border-left: 4px solid #22c55e; }
+  &.exam-upcoming { border-left: 4px solid #f59e0b; }
+  &.exam-closed { border-left: 4px solid #94a3b8; opacity: 0.8; }
+}
+
+.exam-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+
+  h3 {
+    margin: 0 0 4px;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1e293b;
+  }
+}
+
+.exam-folder-tag {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.exam-instructions {
+  font-size: 0.87rem;
+  color: #475569;
+  margin: 0;
+  background: #f8fafc;
+  border-radius: 6px;
+  padding: 8px 12px;
+  border-left: 3px solid #0ea5e9;
+}
+
+.exam-dates {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+
+  span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.78rem;
+    color: #64748b;
+  }
+}
+
+.exam-card-footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.btn-start-exam {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: #0ea5e9;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+
+  &:hover:not(.disabled) { background: #0284c7; }
+
+  &.disabled {
+    background: #e2e8f0;
+    color: #94a3b8;
+    cursor: not-allowed;
+  }
+}

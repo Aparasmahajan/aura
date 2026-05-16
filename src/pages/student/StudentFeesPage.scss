@@ -1,0 +1,83 @@
+.student-fees { max-width: 720px; }
+
+.fees-list { display: flex; flex-direction: column; gap: 16px; }
+
+.fee-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border-left: 4px solid #94a3b8;
+
+  &.status-paid    { border-left-color: #22c55e; }
+  &.status-partial { border-left-color: #f59e0b; }
+  &.status-pending { border-left-color: #0ea5e9; }
+  &.status-overdue { border-left-color: #ef4444; }
+}
+
+.fee-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+
+  h3 { margin: 0 0 3px; font-size: 1rem; font-weight: 700; color: #1e293b; }
+}
+
+.fee-due { margin: 0; font-size: 0.8rem; color: #64748b; }
+
+.fee-amounts {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.fee-amount-block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  .label { font-size: 0.72rem; color: #94a3b8; font-weight: 600; text-transform: uppercase; }
+
+  .amount {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #1e293b;
+
+    &.paid { color: #22c55e; }
+    &.due  { color: #ef4444; }
+  }
+}
+
+.fee-progress {
+  height: 7px;
+  background: #f1f5f9;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.fee-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #0ea5e9, #22c55e);
+  border-radius: 999px;
+  transition: width 0.5s;
+}
+
+.fee-pct { margin: 0; font-size: 0.78rem; color: #64748b; }
+
+.fee-notes {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  background: #fffbeb;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 0.83rem;
+  color: #854d0e;
+
+  svg { flex-shrink: 0; margin-top: 1px; }
+}
+
+.fee-updated { margin: 0; font-size: 0.75rem; color: #94a3b8; }

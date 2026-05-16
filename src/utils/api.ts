@@ -80,26 +80,28 @@ class ApiClient {
 
       const raw = await response.json();
 
-      if (!response.ok) {
-        return { error: raw.error, message: raw.message };
+      // Backend always returns HTTP 200; check responseCode in body for actual result
+      const responseCode = String(raw?.responseCode ?? '');
+      if (responseCode !== '2000') {
+        return { error: raw?.message ?? 'Login failed', message: raw?.message };
       }
 
-      const data = raw?.data ?? raw;
+      const data = raw?.data;
+      if (!data) return { error: 'Login failed' };
 
-      if (data && (data.token || data.username || data.email)) {
-        if (data.token) {
-          sessionStorage.setItem('jwt_token', data.token);
-        }
-        const decodedId = this.getAuthUserId();
-        const roleName = Array.isArray(data?.roles) && data.roles.length > 0 ? data.roles[0].name.toLowerCase() : 'user';
-        const normalizedUser = {
-          id: decodedId ?? '',
-          username: data?.username ?? username,
-          email: data?.email ?? '',
-          role: roleName,
-        };
-        sessionStorage.setItem('user', JSON.stringify(normalizedUser));
+      if (data.token) {
+        sessionStorage.setItem('jwt_token', data.token);
       }
+      const decodedId = this.getAuthUserId();
+      const rawRole = Array.isArray(data.roles) && data.roles.length > 0 ? data.roles[0].name.toLowerCase() : 'student';
+      const normalizedUser = {
+        id: decodedId ?? '',
+        username: data.username ?? username,
+        email: data.email ?? '',
+        role: rawRole,
+        fullName: data.fullName ?? data.full_name ?? null,
+      };
+      sessionStorage.setItem('user', JSON.stringify(normalizedUser));
 
       return { data };
     } catch (error) {
@@ -472,6 +474,567 @@ async folderAccessUpdate(folderId: number, userIds: number[]): Promise<ApiRespon
 
   isAuthenticated(): boolean {
     return !!this.getAuthToken();
+  }
+
+  // ─── Student onboarding ──────────────────────────────────────────────────
+
+  async onboardStudent(data: {
+    username: string;
+    email: string;
+    password: string;
+    fullName?: string;
+    enrollmentNo?: string;
+    course?: string;
+    yearSemester?: string;
+    phone?: string;
+    portalId?: string;
+    folderIds?: number[];
+  }): Promise<ApiResponse> {
+    try {
+      const token = this.getAuthToken();
+      const response = await fetch('http://localhost:8090/profiler/user/onboard', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(data),
+      });
+      const raw = await response.json();
+      if (!response.ok) return { error: raw.message || 'Failed to onboard student' };
+      return { data: raw };
+    } catch {
+      return { error: 'Network error' };
+    }
+  }
+
+  async getPortalStudents(portalId: string): Promise<ApiResponse> {
+    try {
+      const token = this.getAuthToken();
+      const response = await fetch(
+        `http://localhost:8090/profiler/portal/${portalId}/students`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          },
+        }
+      );
+      const data = await response.json();
+      if (!response.ok) return { error: data.message || 'Failed to fetch students' };
+      return { data };
+    } catch {
+      return { error: 'Network error' };
+    }
+  }
+
+  async getUserProfile(userId: string): Promise<ApiResponse> {
+    try {
+      const token = this.getAuthToken();
+      const response = await fetch(
+        `http://localhost:8090/profiler/user/profile/${userId}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          },
+        }
+      );
+      const data = await response.json();
+      if (!response.ok) return { error: data.message || 'Failed to fetch profile' };
+      return { data };
+    } catch {
+      return { error: 'Network error' };
+    }
+  }
+
+  async updateUserProfile(userId: string, profileData: Record<string, any>): Promise<ApiResponse> {
+    try {
+      const token = this.getAuthToken();
+      const response = await fetch(
+        `http://localhost:8090/profiler/user/profile/${userId}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify(profileData),
+        }
+      );
+      const data = await response.json();
+      if (!response.ok) return { error: data.message || 'Failed to update profile' };
+      return { data };
+    } catch {
+      return { error: 'Network error' };
+    }
+  }
+
+  // ─── News ────────────────────────────────────────────────────────────────
+
+  async createNews(data: {
+    portalId: string;
+    folderId?: string | null;
+    title: string;
+    body: string;
+    isPinned?: boolean;
+  }): Promise<ApiResponse> {
+    try {
+      const token = this.getAuthToken();
+      const response = await fetch('http://localhost:8090/profiler/news', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(data),
+      });
+      const raw = await response.json();
+      if (!response.ok) return { error: raw.message || 'Failed to post news' };
+      return { data: raw };
+    } catch {
+      return { error: 'Network error' };
+    }
+  }
+
+  async getNews(params: { portalId: string; folderId?: string }): Promise<ApiResponse> {
+    try {
+      const token = this.getAuthToken();
+      const qs = new URLSearchParams({ portalId: params.portalId });
+      if (params.folderId) qs.set('folderId', params.folderId);
+      const response = await fetch(
+        `http://localhost:8090/profiler/news?${qs}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          },
+        }
+      );
+      const data = await response.json();
+      if (!response.ok) return { error: data.message || 'Failed to fetch news' };
+      return { data };
+    } catch {
+      return { error: 'Network error' };
+    }
+  }
+
+  async deleteNews(newsId: string): Promise<ApiResponse> {
+    try {
+      const token = this.getAuthToken();
+      const response = await fetch(`http://localhost:8090/profiler/news/${newsId}`, {
+        method: 'DELETE',
+        headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
+      });
+      const data = await response.json();
+      if (!response.ok) return { error: data.message || 'Failed to delete news' };
+      return { data };
+    } catch {
+      return { error: 'Network error' };
+    }
+  }
+
+  // ─── Video progress ──────────────────────────────────────────────────────
+
+  async upsertVideoProgress(data: {
+    studentId: string;
+    contentId: string;
+    folderId: string;
+    watchedSeconds: number;
+    totalSeconds: number;
+  }): Promise<ApiResponse> {
+    try {
+      const token = this.getAuthToken();
+      const percentWatched = data.totalSeconds > 0
+        ? Math.min(100, (data.watchedSeconds / data.totalSeconds) * 100)
+        : 0;
+      const response = await fetch('http://localhost:8091/content/video-progress', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ ...data, percentWatched, completed: percentWatched >= 90 }),
+      });
+      const raw = await response.json();
+      if (!response.ok) return { error: raw.message || 'Failed to save progress' };
+      return { data: raw };
+    } catch {
+      return { error: 'Network error' };
+    }
+  }
+
+  async getVideoProgress(studentId: string, folderId?: string): Promise<ApiResponse> {
+    try {
+      const token = this.getAuthToken();
+      const path = folderId
+        ? `http://localhost:8091/content/video-progress/${studentId}/folder/${folderId}`
+        : `http://localhost:8091/content/video-progress/${studentId}`;
+      const response = await fetch(path, {
+        headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
+      });
+      const data = await response.json();
+      if (!response.ok) return { error: data.message || 'Failed to fetch progress' };
+      return { data };
+    } catch {
+      return { error: 'Network error' };
+    }
+  }
+
+  // ─── Attendance ──────────────────────────────────────────────────────────
+
+  async getMyAttendance(studentId: string): Promise<ApiResponse> {
+    try {
+      const token = this.getAuthToken();
+      const response = await fetch(
+        `http://localhost:8090/profiler/attendance/${studentId}`,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          },
+        }
+      );
+      const data = await response.json();
+      if (!response.ok) return { error: data.message || 'Failed to fetch attendance' };
+      return { data };
+    } catch {
+      return { error: 'Network error' };
+    }
+  }
+
+  async getFolderAttendance(folderId: string): Promise<ApiResponse> {
+    try {
+      const token = this.getAuthToken();
+      const response = await fetch(
+        `http://localhost:8090/profiler/attendance/folder/${folderId}`,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          },
+        }
+      );
+      const data = await response.json();
+      if (!response.ok) return { error: data.message || 'Failed to fetch attendance' };
+      return { data };
+    } catch {
+      return { error: 'Network error' };
+    }
+  }
+
+  async markAttendance(records: {
+    studentId: string;
+    folderId: string;
+    date: string;
+    status: 'present' | 'absent' | 'late' | 'excused';
+    notes?: string;
+  }[]): Promise<ApiResponse> {
+    try {
+      const token = this.getAuthToken();
+      const response = await fetch('http://localhost:8090/profiler/attendance', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ records }),
+      });
+      const data = await response.json();
+      if (!response.ok) return { error: data.message || 'Failed to mark attendance' };
+      return { data };
+    } catch {
+      return { error: 'Network error' };
+    }
+  }
+
+  // ─── Fee records ─────────────────────────────────────────────────────────
+
+  async getStudentFees(studentId: string): Promise<ApiResponse> {
+    try {
+      const token = this.getAuthToken();
+      const response = await fetch(
+        `http://localhost:8090/profiler/fee/${studentId}`,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          },
+        }
+      );
+      const data = await response.json();
+      if (!response.ok) return { error: data.message || 'Failed to fetch fees' };
+      return { data };
+    } catch {
+      return { error: 'Network error' };
+    }
+  }
+
+  async upsertFeeRecord(data: {
+    studentId: string;
+    portalId: string;
+    academicYear: string;
+    totalAmount: number;
+    paidAmount: number;
+    dueDate?: string;
+    paymentStatus: 'pending' | 'partial' | 'paid' | 'overdue';
+    paymentNotes?: string;
+  }): Promise<ApiResponse> {
+    try {
+      const token = this.getAuthToken();
+      const response = await fetch('http://localhost:8090/profiler/fee', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(data),
+      });
+      const raw = await response.json();
+      if (!response.ok) return { error: raw.message || 'Failed to save fee record' };
+      return { data: raw };
+    } catch {
+      return { error: 'Network error' };
+    }
+  }
+
+  // ─── Assignments ─────────────────────────────────────────────────────────
+
+  async getFolderAssignments(folderId: string): Promise<ApiResponse> {
+    try {
+      const token = this.getAuthToken();
+      const response = await fetch(
+        `http://localhost:8091/content/folder/${folderId}/assignments`,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          },
+        }
+      );
+      const data = await response.json();
+      if (!response.ok) return { error: data.message || 'Failed to fetch assignments' };
+      return { data };
+    } catch {
+      return { error: 'Network error' };
+    }
+  }
+
+  async createAssignment(data: {
+    folderId: string;
+    title: string;
+    description?: string;
+    fileUrl?: string;
+    dueDate?: string;
+  }): Promise<ApiResponse> {
+    try {
+      const token = this.getAuthToken();
+      const response = await fetch('http://localhost:8091/content/assignment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(data),
+      });
+      const raw = await response.json();
+      if (!response.ok) return { error: raw.message || 'Failed to create assignment' };
+      return { data: raw };
+    } catch {
+      return { error: 'Network error' };
+    }
+  }
+
+  async submitAssignment(assignmentId: string, data: {
+    fileUrl?: string;
+    textResponse?: string;
+  }): Promise<ApiResponse> {
+    try {
+      const token = this.getAuthToken();
+      const response = await fetch(
+        `http://localhost:8091/content/assignment/${assignmentId}/submit`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify(data),
+        }
+      );
+      const raw = await response.json();
+      if (!response.ok) return { error: raw.message || 'Failed to submit assignment' };
+      return { data: raw };
+    } catch {
+      return { error: 'Network error' };
+    }
+  }
+
+  // ─── Folder exams ────────────────────────────────────────────────────────
+
+  async getFolderExams(folderId: string): Promise<ApiResponse> {
+    try {
+      const token = this.getAuthToken();
+      const response = await fetch(
+        `http://localhost:8091/content/folder/${folderId}/exams`,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          },
+        }
+      );
+      const data = await response.json();
+      if (!response.ok) return { error: data.message || 'Failed to fetch exams' };
+      return { data };
+    } catch {
+      return { error: 'Network error' };
+    }
+  }
+
+  async assignExamToFolder(data: {
+    folderId: string;
+    examCode: string;
+    examTitle: string;
+    availableFrom?: string;
+    availableUntil?: string;
+    instructions?: string;
+  }): Promise<ApiResponse> {
+    try {
+      const token = this.getAuthToken();
+      const response = await fetch('http://localhost:8091/content/folder-exam', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(data),
+      });
+      const raw = await response.json();
+      if (!response.ok) return { error: raw.message || 'Failed to assign exam' };
+      return { data: raw };
+    } catch {
+      return { error: 'Network error' };
+    }
+  }
+
+  async generateExamLink(data: {
+    examId: string;
+    userName: string;
+    userEmail: string;
+    validForMinutes?: number;
+  }): Promise<ApiResponse<{ link: string; expiresAt?: string; validFrom?: string }>> {
+    try {
+      const token = this.getAuthToken();
+      const response = await fetch('http://localhost:8091/content/exam/generate-link', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(data),
+      });
+      const raw = await response.json();
+      if (!response.ok) return { error: raw.message || 'Failed to generate exam link' };
+      // ResponseDTO wraps the actual payload in .data
+      const payload = raw.data ?? raw;
+      return { data: payload };
+    } catch {
+      return { error: 'Network error' };
+    }
+  }
+
+  async getExamResults(folderId: string, folderExamId: string): Promise<ApiResponse> {
+    try {
+      const token = this.getAuthToken();
+      const response = await fetch(
+        `http://localhost:8091/content/exam/results/folder/${folderId}?folderExamId=${folderExamId}`,
+        {
+          headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
+        }
+      );
+      const data = await response.json();
+      if (!response.ok) return { error: data.message || 'Failed to fetch exam results' };
+      return { data };
+    } catch {
+      return { error: 'Network error' };
+    }
+  }
+
+  // ─── Folder owners (sub-admin assignment) ────────────────────────────────
+
+  async getFolderOwners(folderId: string): Promise<ApiResponse> {
+    try {
+      const token = this.getAuthToken();
+      const response = await fetch(
+        `http://localhost:8091/content/folder/${folderId}/owners`,
+        {
+          headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
+        }
+      );
+      const data = await response.json();
+      if (!response.ok) return { error: data.message || 'Failed to fetch owners' };
+      return { data };
+    } catch {
+      return { error: 'Network error' };
+    }
+  }
+
+  async addFolderOwner(folderId: string, userId: string): Promise<ApiResponse> {
+    try {
+      const token = this.getAuthToken();
+      const response = await fetch('http://localhost:8091/content/folder-owner', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ folderId, userId }),
+      });
+      const raw = await response.json();
+      if (!response.ok) return { error: raw.message || 'Failed to add owner' };
+      return { data: raw };
+    } catch {
+      return { error: 'Network error' };
+    }
+  }
+
+  async removeFolderOwner(folderId: string, userId: string): Promise<ApiResponse> {
+    try {
+      const token = this.getAuthToken();
+      const response = await fetch(
+        `http://localhost:8091/content/folder-owner/${folderId}/${userId}`,
+        {
+          method: 'DELETE',
+          headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
+        }
+      );
+      const data = await response.json();
+      if (!response.ok) return { error: data.message || 'Failed to remove owner' };
+      return { data };
+    } catch {
+      return { error: 'Network error' };
+    }
+  }
+
+  async getPortalSubAdmins(portalId: string): Promise<ApiResponse> {
+    try {
+      const token = this.getAuthToken();
+      const response = await fetch(
+        `http://localhost:8090/profiler/portal/${portalId}/sub-admins`,
+        {
+          headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
+        }
+      );
+      const data = await response.json();
+      if (!response.ok) return { error: data.message || 'Failed to fetch sub-admins' };
+      return { data };
+    } catch {
+      return { error: 'Network error' };
+    }
   }
 }
 

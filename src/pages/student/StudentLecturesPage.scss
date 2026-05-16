@@ -1,0 +1,73 @@
+.student-lectures {
+  max-width: 860px;
+}
+
+.folders-grid-lectures {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.lecture-folder-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 18px 20px;
+  cursor: pointer;
+  transition: all 0.18s;
+
+  &:hover {
+    border-color: #0ea5e9;
+    box-shadow: 0 4px 14px rgba(14,165,233,0.12);
+    transform: translateX(3px);
+  }
+
+  .folder-icon-wrap {
+    color: #f59e0b;
+    flex-shrink: 0;
+  }
+
+  .folder-info {
+    flex: 1;
+    min-width: 0;
+
+    h3 {
+      margin: 0 0 3px;
+      font-size: 0.97rem;
+      font-weight: 700;
+      color: #1e293b;
+    }
+
+    p {
+      margin: 0;
+      font-size: 0.82rem;
+      color: #64748b;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+
+  .arrow {
+    color: #94a3b8;
+    flex-shrink: 0;
+  }
+}
+
+.progress-bar-wrap {
+  margin-top: 8px;
+  background: #f1f5f9;
+  border-radius: 999px;
+  height: 5px;
+  overflow: hidden;
+
+  .progress-bar-fill {
+    height: 100%;
+    background: #0ea5e9;
+    border-radius: 999px;
+    transition: width 0.4s;
+  }
+}

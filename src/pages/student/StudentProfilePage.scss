@@ -103,6 +103,20 @@
   padding-top: 4px;
 }
 
+@media (max-width: 768px) {
+  .student-profile {
+    max-width: 100%;
+  }
+
+  .profile-card {
+    padding: 18px 16px;
+  }
+
+  .profile-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .btn-save {
   display: inline-flex;
   align-items: center;

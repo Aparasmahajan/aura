@@ -106,3 +106,28 @@
     cursor: not-allowed;
   }
 }
+
+@media (max-width: 640px) {
+  .student-exams {
+    max-width: 100%;
+  }
+
+  .exam-card {
+    padding: 14px 14px;
+  }
+
+  .exam-card-top {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .exam-card-footer {
+    justify-content: stretch;
+
+    .btn-start-exam {
+      width: 100%;
+      justify-content: center;
+    }
+  }
+}

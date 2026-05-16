@@ -1,8 +1,8 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Outlet, NavLink, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import {
-  Home, BookOpen, ClipboardList, Calendar, CreditCard, User, LogOut, GraduationCap
+  Home, BookOpen, ClipboardList, Calendar, CreditCard, User, LogOut, GraduationCap, Menu, X
 } from 'lucide-react';
 import './StudentLayout.scss';
 
@@ -20,13 +20,13 @@ const StudentLayout: React.FC = () => {
   const { portalName } = useParams<{ portalName: string }>();
   const { user, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
       navigate(`/${portalName}/login`, { replace: true });
       return;
     }
-    // non-students that land here get sent to the admin dashboard
     if (user && user.role !== 'student') {
       navigate(`/${portalName}/dashboard`, { replace: true });
     }
@@ -37,9 +37,23 @@ const StudentLayout: React.FC = () => {
     navigate(`/${portalName}/login`);
   };
 
+  const closeSidebar = () => setSidebarOpen(false);
+
   return (
     <div className="student-layout">
-      <aside className="student-sidebar">
+      <div className="mobile-topbar">
+        <button className="hamburger-btn" onClick={() => setSidebarOpen(o => !o)} aria-label="Toggle menu">
+          {sidebarOpen ? <X size={22} /> : <Menu size={22} />}
+        </button>
+        <div className="mobile-brand">
+          <GraduationCap size={20} />
+          <span>Student Portal</span>
+        </div>
+      </div>
+
+      {sidebarOpen && <div className="sidebar-overlay" onClick={closeSidebar} />}
+
+      <aside className={`student-sidebar${sidebarOpen ? ' open' : ''}`}>
         <div className="sidebar-brand">
           <GraduationCap size={28} />
           <span>Student Portal</span>
@@ -51,6 +65,7 @@ const StudentLayout: React.FC = () => {
               key={to}
               to={`/${portalName}/student/${to}`}
               className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
+              onClick={closeSidebar}
             >
               {icon}
               <span>{label}</span>

@@ -166,3 +166,19 @@
   font-size: 0.9rem;
   padding: 12px;
 }
+
+@media (max-width: 640px) {
+  .student-home {
+    max-width: 100%;
+  }
+
+  .quick-link-card {
+    flex: 1;
+    min-width: calc(50% - 8px);
+    padding: 16px 12px;
+  }
+
+  .news-section {
+    padding: 16px;
+  }
+}

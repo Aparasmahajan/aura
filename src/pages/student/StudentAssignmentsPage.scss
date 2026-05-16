@@ -133,6 +133,39 @@
 .form-error { color: #ef4444; font-size: 0.83rem; margin: 0; }
 .form-success { color: #22c55e; font-size: 0.83rem; margin: 0; }
 
+@media (max-width: 640px) {
+  .student-assignments {
+    max-width: 100%;
+  }
+
+  .assignment-card {
+    padding: 14px 14px;
+  }
+
+  .asgn-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .btn-submit-asgn {
+    align-self: stretch;
+    justify-content: center;
+  }
+
+  .submit-modal {
+    width: 100%;
+    max-width: 100%;
+    border-radius: 14px 14px 0 0;
+    position: fixed;
+    bottom: 0;
+  }
+
+  .modal-overlay {
+    align-items: flex-end;
+  }
+}
+
 .submit-modal-footer {
   padding: 14px 22px 18px;
   display: flex;

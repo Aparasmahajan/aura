@@ -272,3 +272,32 @@
 }
 
 @keyframes spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 768px) {
+  .sub-admin-panel {
+    max-width: 100%;
+    padding: 16px;
+  }
+
+  .panel-tabs {
+    width: 100%;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+  }
+
+  .panel-tab {
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .owned-folder-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .ofc-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}

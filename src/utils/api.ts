@@ -289,6 +289,67 @@ async folderAccessUpdate(folderId: number, userIds: number[]): Promise<ApiRespon
   }
 }
 
+  async getFolderAccessUsers(folderId: number): Promise<ApiResponse> {
+    try {
+      const token = this.getAuthToken();
+      const userId = this.getAuthUserId();
+      const response = await fetch(`http://localhost:8091/content/folder/${folderId}/access-users`, {
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          ...(userId ? { 'userId': userId } : {}),
+        },
+      });
+      const raw = await response.json();
+      const rc = String(raw?.responseCode ?? '');
+      if (rc !== '2000') return { error: raw?.message || 'Failed to fetch access users' };
+      return { data: Array.isArray(raw.data) ? raw.data : [] };
+    } catch {
+      return { error: 'Network error' };
+    }
+  }
+
+  async revokeFolderAccess(folderId: number, userId: number): Promise<ApiResponse> {
+    try {
+      const token = this.getAuthToken();
+      const authUserId = this.getAuthUserId();
+      const response = await fetch(`http://localhost:8091/content/folder/${folderId}/access/${userId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          ...(authUserId ? { 'userId': authUserId } : {}),
+        },
+      });
+      const raw = await response.json();
+      const rc = String(raw?.responseCode ?? '');
+      if (rc !== '2000') return { error: raw?.message || 'Failed to revoke access' };
+      return { data: true };
+    } catch {
+      return { error: 'Network error' };
+    }
+  }
+
+  async getUsersByIds(ids: number[]): Promise<ApiResponse> {
+    try {
+      const token = this.getAuthToken();
+      const response = await fetch('http://localhost:8090/profiler/user/by-ids', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(ids),
+      });
+      const raw = await response.json();
+      const rc = String(raw?.responseCode ?? '');
+      if (rc !== '2000') return { error: raw?.message || 'Failed to fetch users' };
+      return { data: Array.isArray(raw.data) ? raw.data : [] };
+    } catch {
+      return { error: 'Network error' };
+    }
+  }
+
   async createUser(data: { username: string; email: string; password: string; fullName?: string }): Promise<ApiResponse> {
     try {
       const response = await fetch('http://localhost:8090/profiler/user/signup', {
@@ -400,7 +461,7 @@ async folderAccessUpdate(folderId: number, userIds: number[]): Promise<ApiRespon
       const token = this.getAuthToken();
       const userId = this.getAuthUserId();
       const response = await fetch(
-        `http://localhost:9091/content/deleteFolder?folderId=${folderId}`,
+        `http://localhost:8091/content/deleteFolder?folderId=${folderId}`,
         {
           method: 'DELETE',
           headers: {
@@ -483,12 +544,12 @@ async folderAccessUpdate(folderId: number, userIds: number[]): Promise<ApiRespon
     email: string;
     password: string;
     fullName?: string;
-    enrollmentNo?: string;
     course?: string;
-    yearSemester?: string;
+    specialization?: string;
+    year?: string;
+    semester?: string;
     phone?: string;
     portalId?: string;
-    folderIds?: number[];
   }): Promise<ApiResponse> {
     try {
       const token = this.getAuthToken();
@@ -501,8 +562,46 @@ async folderAccessUpdate(folderId: number, userIds: number[]): Promise<ApiRespon
         body: JSON.stringify(data),
       });
       const raw = await response.json();
-      if (!response.ok) return { error: raw.message || 'Failed to onboard student' };
-      return { data: raw };
+      const rc = String(raw?.responseCode ?? '');
+      if (rc !== '2000') return { error: raw?.message || 'Failed to onboard student' };
+      return { data: raw.data };
+    } catch {
+      return { error: 'Network error' };
+    }
+  }
+
+  async searchStudents(q: string): Promise<ApiResponse> {
+    try {
+      const token = this.getAuthToken();
+      const response = await fetch(
+        `http://localhost:8090/profiler/user/search?q=${encodeURIComponent(q)}`,
+        {
+          headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
+        }
+      );
+      const raw = await response.json();
+      const rc = String(raw?.responseCode ?? '');
+      if (rc !== '2000') return { error: raw?.message || 'Search failed' };
+      return { data: Array.isArray(raw.data) ? raw.data : [] };
+    } catch {
+      return { error: 'Network error' };
+    }
+  }
+
+  async enrollStudentToPortal(userId: number, portalId: string): Promise<ApiResponse> {
+    try {
+      const token = this.getAuthToken();
+      const response = await fetch(
+        `http://localhost:8090/profiler/user/enroll?userId=${userId}&portalId=${portalId}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
+        }
+      );
+      const raw = await response.json();
+      const rc = String(raw?.responseCode ?? '');
+      if (rc !== '2000') return { error: raw?.message || 'Enroll failed' };
+      return { data: true };
     } catch {
       return { error: 'Network error' };
     }
@@ -554,9 +653,9 @@ async folderAccessUpdate(folderId: number, userIds: number[]): Promise<ApiRespon
     try {
       const token = this.getAuthToken();
       const response = await fetch(
-        `http://localhost:8090/profiler/user/profile/${userId}`,
+        `http://localhost:8090/profiler/user/profile/update/${userId}`,
         {
-          method: 'PUT',
+          method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
@@ -564,9 +663,10 @@ async folderAccessUpdate(folderId: number, userIds: number[]): Promise<ApiRespon
           body: JSON.stringify(profileData),
         }
       );
-      const data = await response.json();
-      if (!response.ok) return { error: data.message || 'Failed to update profile' };
-      return { data };
+      const raw = await response.json();
+      const rc = String(raw?.responseCode ?? '');
+      if (rc !== '2000') return { error: raw?.message || 'Failed to update profile' };
+      return { data: raw.data };
     } catch {
       return { error: 'Network error' };
     }
@@ -922,26 +1022,29 @@ async folderAccessUpdate(folderId: number, userIds: number[]): Promise<ApiRespon
   }
 
   async generateExamLink(data: {
-    examId: string;
+    examCode: string;
     userName: string;
     userEmail: string;
     validForMinutes?: number;
   }): Promise<ApiResponse<{ link: string; expiresAt?: string; validFrom?: string }>> {
     try {
       const token = this.getAuthToken();
-      const response = await fetch('http://localhost:8091/content/exam/generate-link', {
+      const response = await fetch('http://localhost:8090/profiler/api/exam/generate-link', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          examCode:        data.examCode,
+          userName:        data.userName,
+          userEmail:       data.userEmail,
+          validForMinutes: data.validForMinutes ?? 180,
+        }),
       });
       const raw = await response.json();
-      if (!response.ok) return { error: raw.message || 'Failed to generate exam link' };
-      // ResponseDTO wraps the actual payload in .data
-      const payload = raw.data ?? raw;
-      return { data: payload };
+      if (!response.ok) return { error: raw.error || raw.message || 'Failed to generate exam link' };
+      return { data: raw };
     } catch {
       return { error: 'Network error' };
     }

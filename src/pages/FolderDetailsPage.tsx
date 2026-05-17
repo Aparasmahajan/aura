@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Folder, ArrowLeft, FolderPlus, Book, X, UserCheck, Trash2, Shield } from 'lucide-react';
+import { Folder, ArrowLeft, FolderPlus, Book, X, UserCheck, Trash2, Shield, UserPlus, AlertCircle, CheckCircle, Search, Users } from 'lucide-react';
 import { apiClient } from '../utils/api';
 import { useAuth } from '../contexts/AuthContext';
 import CreateFolderModal from '../pages/CreateFolderModal';
@@ -76,6 +76,33 @@ const FolderDetailsPage: React.FC = () => {
     const [deleteLoading, setDeleteLoading] = useState(false);
     const [deleteError, setDeleteError] = useState('');
 
+    // Student management modal
+    const [showOnboardModal, setShowOnboardModal] = useState(false);
+    const [modalMode, setModalMode] = useState<'list' | 'create'>('list');
+
+    // Enrolled students list
+    const [enrolledStudents, setEnrolledStudents] = useState<any[]>([]);
+    const [enrolledLoading, setEnrolledLoading] = useState(false);
+    const [studentFilter, setStudentFilter] = useState('');
+    const [revoking, setRevoking] = useState<Record<number, boolean>>({});
+
+    // Add existing student search
+    const [addQuery, setAddQuery] = useState('');
+    const [addResults, setAddResults] = useState<any[]>([]);
+    const [addSearchLoading, setAddSearchLoading] = useState(false);
+    const [adding, setAdding] = useState<Record<number, boolean>>({});
+    const [addedIds, setAddedIds] = useState<Set<number>>(new Set());
+    const addTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // Create new student form
+    const [onboardForm, setOnboardForm] = useState({
+        username: '', email: '', password: '', fullName: '',
+        course: '', specialization: '', year: '', semester: '', phone: '',
+    });
+    const [onboardLoading, setOnboardLoading] = useState(false);
+    const [onboardError, setOnboardError] = useState('');
+    const [onboardSuccess, setOnboardSuccess] = useState('');
+
     useEffect(() => {
         if (!isAuthenticated) {
             navigate(`/${portalName}/login`);
@@ -134,6 +161,99 @@ const FolderDetailsPage: React.FC = () => {
         } else {
             navigate(-1);
         }
+    };
+
+    const loadEnrolledStudents = async () => {
+        if (!folder) return;
+        setEnrolledLoading(true);
+        const accessRes = await apiClient.getFolderAccessUsers(folder.folderId);
+        if (accessRes.error || !accessRes.data?.length) {
+            setEnrolledStudents([]);
+            setEnrolledLoading(false);
+            return;
+        }
+        const ids: number[] = accessRes.data.map((a: any) => a.userId);
+        const usersRes = await apiClient.getUsersByIds(ids);
+        const users: any[] = usersRes.data ?? [];
+        // merge grantedAt from access list
+        const merged = users.map(u => {
+            const access = accessRes.data.find((a: any) => a.userId === u.userId);
+            return { ...u, grantedAt: access?.grantedAt };
+        });
+        setEnrolledStudents(merged);
+        setEnrolledLoading(false);
+    };
+
+    const openManageModal = () => {
+        setShowOnboardModal(true);
+        setModalMode('list');
+        setStudentFilter('');
+        setAddQuery('');
+        setAddResults([]);
+        setAddedIds(new Set());
+        setOnboardError('');
+        setOnboardSuccess('');
+        setOnboardForm({ username: '', email: '', password: '', fullName: '', course: '', specialization: '', year: '', semester: '', phone: '' });
+        loadEnrolledStudents();
+    };
+
+    const closeManageModal = () => {
+        setShowOnboardModal(false);
+    };
+
+    const handleRevoke = async (student: any) => {
+        if (!folder) return;
+        setRevoking(r => ({ ...r, [student.userId]: true }));
+        const res = await apiClient.revokeFolderAccess(folder.folderId, student.userId);
+        setRevoking(r => ({ ...r, [student.userId]: false }));
+        if (!res.error) {
+            setEnrolledStudents(prev => prev.filter(s => s.userId !== student.userId));
+        }
+    };
+
+    const handleAddSearch = (q: string) => {
+        setAddQuery(q);
+        if (addTimerRef.current) clearTimeout(addTimerRef.current);
+        if (!q.trim()) { setAddResults([]); return; }
+        addTimerRef.current = setTimeout(async () => {
+            setAddSearchLoading(true);
+            const res = await apiClient.searchStudents(q.trim());
+            setAddSearchLoading(false);
+            setAddResults(res.data ?? []);
+        }, 400);
+    };
+
+    const handleGiveAccess = async (student: any) => {
+        if (!folder) return;
+        setAdding(a => ({ ...a, [student.userId]: true }));
+        const res = await apiClient.folderAccessUpdate(folder.folderId, [student.userId]);
+        setAdding(a => ({ ...a, [student.userId]: false }));
+        if (!res.error) {
+            setAddedIds(prev => new Set(prev).add(student.userId));
+            // also refresh enrolled list
+            setEnrolledStudents(prev => prev.some(s => s.userId === student.userId) ? prev : [...prev, student]);
+        }
+    };
+
+    const handleOnboard = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setOnboardLoading(true);
+        setOnboardError('');
+        setOnboardSuccess('');
+        const res = await apiClient.onboardStudent({
+            ...onboardForm,
+            portalId: folder ? String(folder.portalId) : undefined,
+        });
+        if (res.error) { setOnboardError(res.error); setOnboardLoading(false); return; }
+        // grant folder access to newly created student
+        const newUserId = res.data?.userId;
+        if (newUserId && folder) {
+            await apiClient.folderAccessUpdate(folder.folderId, [newUserId]);
+        }
+        setOnboardLoading(false);
+        setOnboardSuccess(`Student "${onboardForm.username}" created and added to folder!`);
+        setOnboardForm({ username: '', email: '', password: '', fullName: '', course: '', specialization: '', year: '', semester: '', phone: '' });
+        loadEnrolledStudents();
     };
 
     const handleAccessEmailAdd = async () => {
@@ -302,12 +422,20 @@ const FolderDetailsPage: React.FC = () => {
                                     </button>
                                 </>
                             )}
+                            <button
+                                className="btn-action btn-onboard"
+                                onClick={openManageModal}
+                            >
+                                <Users size={17} /> Manage Students
+                            </button>
                             <button className="btn-action btn-access" onClick={() => { setShowAccessModal(true); setAccessSuccess(false); setAccessError(''); }}>
                                 <Shield size={17} /> Manage Folder Admin
                             </button>
-                            <button className="btn-action btn-delete" onClick={() => setShowDeleteConfirm(true)}>
-                                <Trash2 size={17} /> Delete Folder
-                            </button>
+                            {!folder.isRoot && (user?.role === 'admin' || user?.role === 'super') && (
+                                <button className="btn-action btn-delete" onClick={() => setShowDeleteConfirm(true)}>
+                                    <Trash2 size={17} /> Delete Folder
+                                </button>
+                            )}
                         </div>
                     )}
 
@@ -465,6 +593,216 @@ const FolderDetailsPage: React.FC = () => {
                         <div className="content-modal-body">
                             {renderContentModal()}
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {showOnboardModal && (
+                <div className="access-modal-overlay" onClick={e => { if (e.target === e.currentTarget) closeManageModal(); }}>
+                    <div className="access-modal student-mgmt-modal">
+
+                        {/* Header */}
+                        <div className="access-modal-header">
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                {modalMode === 'create' && (
+                                    <button className="modal-close-btn" type="button"
+                                        onClick={() => { setModalMode('list'); setOnboardError(''); setOnboardSuccess(''); }}>
+                                        <ArrowLeft size={17} />
+                                    </button>
+                                )}
+                                <div>
+                                    <h3>{modalMode === 'list' ? 'Manage Students' : 'Create New Student'}</h3>
+                                    <p className="access-modal-sub">
+                                        {modalMode === 'list'
+                                            ? <>Students with access to <strong>{folder?.name}</strong></>
+                                            : <>Create & enroll into <strong>{folder?.name}</strong></>}
+                                    </p>
+                                </div>
+                            </div>
+                            <button className="modal-close-btn" onClick={closeManageModal}><X size={18} /></button>
+                        </div>
+
+                        {modalMode === 'list' ? (
+                            <div className="access-modal-body student-list-body">
+
+                                {/* ── Enrolled students ── */}
+                                <div className="sm-section">
+                                    <div className="sm-section-head">
+                                        <span className="sm-section-title">
+                                            <UserCheck size={14} /> Enrolled ({enrolledStudents.length})
+                                        </span>
+                                        <div className="sm-filter-wrap">
+                                            <Search size={13} />
+                                            <input
+                                                placeholder="Filter by name or roll no…"
+                                                value={studentFilter}
+                                                onChange={e => setStudentFilter(e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="sm-student-list">
+                                        {enrolledLoading && <p className="sm-hint">Loading…</p>}
+                                        {!enrolledLoading && enrolledStudents.length === 0 && (
+                                            <p className="sm-hint">No students enrolled yet.</p>
+                                        )}
+                                        {!enrolledLoading && enrolledStudents
+                                            .filter(s => {
+                                                const q = studentFilter.toLowerCase();
+                                                return !q || (s.username || '').toLowerCase().includes(q)
+                                                    || (s.fullName || '').toLowerCase().includes(q);
+                                            })
+                                            .map(s => (
+                                                <div key={s.userId} className="sm-student-row">
+                                                    <div className="sm-avatar">{(s.fullName || s.username || '?')[0].toUpperCase()}</div>
+                                                    <div className="sm-info">
+                                                        <span className="sm-name">{s.fullName || s.username}</span>
+                                                        <span className="sm-meta">
+                                                            {s.username}{s.course ? ` · ${s.course}` : ''}{s.year ? ` · Yr ${s.year}` : ''}
+                                                        </span>
+                                                    </div>
+                                                    <button
+                                                        className="btn-revoke"
+                                                        disabled={revoking[s.userId]}
+                                                        onClick={() => handleRevoke(s)}
+                                                    >
+                                                        {revoking[s.userId] ? '…' : 'Revoke'}
+                                                    </button>
+                                                </div>
+                                            ))}
+                                    </div>
+                                </div>
+
+                                <div className="sm-divider"><span>Add student</span></div>
+
+                                {/* ── Search to add ── */}
+                                <div className="sm-section">
+                                    <div className="sm-add-search">
+                                        <Search size={14} className="sm-search-icon" />
+                                        <input
+                                            placeholder="Search by roll no, name or email…"
+                                            value={addQuery}
+                                            onChange={e => handleAddSearch(e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="sm-add-results">
+                                        {addSearchLoading && <p className="sm-hint">Searching…</p>}
+                                        {!addSearchLoading && addQuery && addResults.length === 0 && (
+                                            <p className="sm-hint">No students found.</p>
+                                        )}
+                                        {!addSearchLoading && !addQuery && (
+                                            <p className="sm-hint">Type to search existing students.</p>
+                                        )}
+                                        {addResults.map(s => {
+                                            const done = addedIds.has(s.userId) || enrolledStudents.some(e => e.userId === s.userId);
+                                            return (
+                                                <div key={s.userId} className="sm-student-row">
+                                                    <div className="sm-avatar">{(s.fullName || s.username || '?')[0].toUpperCase()}</div>
+                                                    <div className="sm-info">
+                                                        <span className="sm-name">{s.fullName || s.username}</span>
+                                                        <span className="sm-meta">{s.username}{s.course ? ` · ${s.course}` : ''}</span>
+                                                    </div>
+                                                    <button
+                                                        className={`btn-give-access${done ? ' done' : ''}`}
+                                                        disabled={done || adding[s.userId]}
+                                                        onClick={() => handleGiveAccess(s)}
+                                                    >
+                                                        {done ? <><CheckCircle size={13} /> Added</> : adding[s.userId] ? '…' : 'Give Access'}
+                                                    </button>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                <div className="sm-create-new-wrap">
+                                    <button className="btn-sm-create" onClick={() => { setModalMode('create'); setOnboardError(''); setOnboardSuccess(''); }}>
+                                        <UserPlus size={15} /> Create New Student Account
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <form onSubmit={handleOnboard}>
+                                <div className="access-modal-body onboard-form">
+                                    <div className="onboard-row">
+                                        <div className="onboard-field">
+                                            <label>Roll Number (Username) *</label>
+                                            <input required value={onboardForm.username}
+                                                onChange={e => setOnboardForm(p => ({ ...p, username: e.target.value }))}
+                                                placeholder="e.g. 2024CS001" />
+                                        </div>
+                                        <div className="onboard-field">
+                                            <label>Full Name</label>
+                                            <input value={onboardForm.fullName}
+                                                onChange={e => setOnboardForm(p => ({ ...p, fullName: e.target.value }))}
+                                                placeholder="Student full name" />
+                                        </div>
+                                    </div>
+                                    <div className="onboard-row">
+                                        <div className="onboard-field">
+                                            <label>Email *</label>
+                                            <input type="email" required value={onboardForm.email}
+                                                onChange={e => setOnboardForm(p => ({ ...p, email: e.target.value }))}
+                                                placeholder="student@example.com" />
+                                        </div>
+                                        <div className="onboard-field">
+                                            <label>Password *</label>
+                                            <input type="password" required value={onboardForm.password}
+                                                onChange={e => setOnboardForm(p => ({ ...p, password: e.target.value }))}
+                                                placeholder="Minimum 6 characters" />
+                                        </div>
+                                    </div>
+                                    <div className="onboard-row">
+                                        <div className="onboard-field">
+                                            <label>Course / Program</label>
+                                            <input value={onboardForm.course}
+                                                onChange={e => setOnboardForm(p => ({ ...p, course: e.target.value }))}
+                                                placeholder="e.g. B.Tech, MBA" />
+                                        </div>
+                                        <div className="onboard-field">
+                                            <label>Specialization / Branch</label>
+                                            <input value={onboardForm.specialization}
+                                                onChange={e => setOnboardForm(p => ({ ...p, specialization: e.target.value }))}
+                                                placeholder="e.g. Computer Science" />
+                                        </div>
+                                    </div>
+                                    <div className="onboard-row">
+                                        <div className="onboard-field">
+                                            <label>Year</label>
+                                            <select value={onboardForm.year} onChange={e => setOnboardForm(p => ({ ...p, year: e.target.value }))}>
+                                                <option value="">Select year</option>
+                                                {['1','2','3','4','5'].map(y => <option key={y} value={y}>{y === '1' ? '1st' : y === '2' ? '2nd' : y === '3' ? '3rd' : `${y}th`} Year</option>)}
+                                            </select>
+                                        </div>
+                                        <div className="onboard-field">
+                                            <label>Semester</label>
+                                            <select value={onboardForm.semester} onChange={e => setOnboardForm(p => ({ ...p, semester: e.target.value }))}>
+                                                <option value="">Select semester</option>
+                                                {[1,2,3,4,5,6,7,8].map(n => <option key={n} value={String(n)}>Sem {n}</option>)}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div className="onboard-row">
+                                        <div className="onboard-field">
+                                            <label>Phone</label>
+                                            <input type="tel" value={onboardForm.phone}
+                                                onChange={e => setOnboardForm(p => ({ ...p, phone: e.target.value }))}
+                                                placeholder="e.g. 9876543210" />
+                                        </div>
+                                    </div>
+
+                                    {onboardError && <div className="onboard-msg onboard-error"><AlertCircle size={15} /> {onboardError}</div>}
+                                    {onboardSuccess && <div className="onboard-msg onboard-success"><CheckCircle size={15} /> {onboardSuccess}</div>}
+                                </div>
+
+                                <div className="access-modal-footer">
+                                    <button type="button" className="btn-access-cancel" onClick={closeManageModal}>Cancel</button>
+                                    <button type="submit" className="btn-access-save" disabled={onboardLoading}>
+                                        {onboardLoading ? 'Creating…' : 'Create & Add to Folder'}
+                                    </button>
+                                </div>
+                            </form>
+                        )}
                     </div>
                 </div>
             )}

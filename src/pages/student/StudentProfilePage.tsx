@@ -10,14 +10,15 @@ interface Profile {
   dateOfBirth: string;
   gender: string;
   address: string;
-  enrollmentNo: string;
   course: string;
-  yearSemester: string;
+  specialization: string;
+  year: string;
+  semester: string;
 }
 
 const EMPTY: Profile = {
   fullName: '', phone: '', dateOfBirth: '', gender: '', address: '',
-  enrollmentNo: '', course: '', yearSemester: '',
+  course: '', specialization: '', year: '', semester: '',
 };
 
 const StudentProfilePage: React.FC = () => {
@@ -45,9 +46,10 @@ const StudentProfilePage: React.FC = () => {
         dateOfBirth: d.dateOfBirth ?? d.date_of_birth ?? '',
         gender: d.gender ?? '',
         address: d.address ?? '',
-        enrollmentNo: d.enrollmentNo ?? d.enrollment_no ?? '',
         course: d.course ?? '',
-        yearSemester: d.yearSemester ?? d.year_semester ?? '',
+        specialization: d.specialization ?? '',
+        year: d.year ?? '',
+        semester: d.semester ?? '',
       });
     }
   };
@@ -126,9 +128,32 @@ const StudentProfilePage: React.FC = () => {
 
             <h3 className="section-label">Academic Information</h3>
             <div className="profile-grid">
-              {field('Enrollment No.', 'enrollmentNo')}
+              <div className="profile-field">
+                <label>Roll Number</label>
+                <input type="text" value={user?.username ?? ''} readOnly style={{ background: '#f8fafc', color: '#64748b' }} />
+              </div>
               {field('Course / Program', 'course')}
-              {field('Year / Semester', 'yearSemester')}
+              {field('Specialization / Branch', 'specialization')}
+              <div className="profile-field">
+                <label>Year</label>
+                <select value={profile.year} onChange={e => setProfile(p => ({ ...p, year: e.target.value }))}>
+                  <option value="">Select year</option>
+                  <option value="1">1st Year</option>
+                  <option value="2">2nd Year</option>
+                  <option value="3">3rd Year</option>
+                  <option value="4">4th Year</option>
+                  <option value="5">5th Year</option>
+                </select>
+              </div>
+              <div className="profile-field">
+                <label>Semester</label>
+                <select value={profile.semester} onChange={e => setProfile(p => ({ ...p, semester: e.target.value }))}>
+                  <option value="">Select semester</option>
+                  {[1,2,3,4,5,6,7,8].map(n => (
+                    <option key={n} value={String(n)}>Sem {n}</option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             {error && (

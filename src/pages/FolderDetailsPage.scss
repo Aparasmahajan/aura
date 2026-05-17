@@ -888,6 +888,341 @@
   }
 }
 
+.onboard-modal {
+  max-width: 560px;
+  width: 95%;
+
+  .onboard-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    padding: 1.2rem 1.6rem;
+  }
+
+  .onboard-row {
+    display: flex;
+    gap: 0.8rem;
+
+    @media (max-width: 520px) {
+      flex-direction: column;
+    }
+  }
+
+  .onboard-field {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+
+    label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #64748b;
+    }
+
+    input, select {
+      padding: 0.55rem 0.8rem;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      color: #1e293b;
+      background: #f8fafc;
+      font-family: inherit;
+      transition: border-color 0.15s;
+
+      &:focus {
+        outline: none;
+        border-color: #667eea;
+        background: #fff;
+      }
+    }
+  }
+
+  .onboard-msg {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.6rem 0.9rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    margin-top: 0.2rem;
+  }
+
+  .onboard-error {
+    background: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+  }
+
+  .onboard-success {
+    background: #f0fdf4;
+    color: #16a34a;
+    border: 1px solid #bbf7d0;
+  }
+}
+
+// ── Student management modal ─────────────────────────────
+.student-mgmt-modal {
+  width: 560px;
+  max-width: 96vw;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.student-list-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow-y: auto;
+  padding: 0 !important;
+}
+
+.sm-section {
+  padding: 14px 20px;
+}
+
+.sm-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.sm-section-title {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.sm-filter-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 7px;
+  padding: 5px 10px;
+  flex: 1;
+  max-width: 220px;
+
+  svg { color: #94a3b8; flex-shrink: 0; }
+
+  input {
+    border: none;
+    outline: none;
+    background: none;
+    font-size: 0.82rem;
+    width: 100%;
+    color: #1e293b;
+    &::placeholder { color: #94a3b8; }
+  }
+}
+
+.sm-student-list,
+.sm-add-results {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.sm-hint {
+  font-size: 0.82rem;
+  color: #94a3b8;
+  text-align: center;
+  padding: 8px 0;
+  margin: 0;
+}
+
+.sm-student-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 8px 12px;
+  transition: border-color 0.15s;
+
+  &:hover { border-color: #a5b4fc; }
+}
+
+.sm-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.82rem;
+  flex-shrink: 0;
+}
+
+.sm-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.sm-name {
+  font-size: 0.87rem;
+  font-weight: 600;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sm-meta {
+  font-size: 0.74rem;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.btn-revoke {
+  background: #fee2e2;
+  color: #dc2626;
+  border: none;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.15s;
+
+  &:hover:not(:disabled) { background: #fca5a5; }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
+}
+
+.btn-give-access {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #667eea;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.15s;
+
+  &:hover:not(:disabled) { background: #5a6fd6; }
+  &:disabled { cursor: not-allowed; }
+  &.done { background: #dcfce7; color: #166534; }
+}
+
+.sm-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 20px;
+  color: #94a3b8;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+
+  &::before, &::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #e2e8f0;
+  }
+}
+
+.sm-add-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+
+  .sm-search-icon {
+    position: absolute;
+    left: 10px;
+    color: #94a3b8;
+    pointer-events: none;
+  }
+
+  input {
+    width: 100%;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 8px 12px 8px 30px;
+    font-size: 0.87rem;
+    outline: none;
+    font-family: inherit;
+    background: #f8fafc;
+    box-sizing: border-box;
+    transition: border-color 0.15s;
+    &:focus { border-color: #667eea; background: #fff; }
+  }
+}
+
+.sm-create-new-wrap {
+  padding: 12px 20px 16px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.btn-sm-create {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  border: 1.5px dashed #a5b4fc;
+  background: #f0f4ff;
+  color: #667eea;
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+
+  &:hover { background: #e0e7ff; border-color: #667eea; }
+}
+
+// ── Existing onboard action button ───────────────────────
+.btn-action.btn-onboard {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 0.55rem 1.1rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: opacity 0.15s, transform 0.15s;
+
+  &:hover { opacity: 0.9; transform: translateY(-1px); }
+}
+
 @media (max-width: 600px) {
   .access-modal-overlay {
     align-items: flex-end;

@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { usePortal } from '../contexts/PortalContext';
 import { apiClient } from '../utils/api';
-import { Folder, FolderPlus, LogOut, User, Shield, UserPlus, X, AlertCircle, CheckCircle } from 'lucide-react';
+import { Folder, FolderPlus, LogOut, User, Shield, UserPlus, X, AlertCircle, CheckCircle, Search, ArrowLeft, UserCheck } from 'lucide-react';
 import './DashboardPage.scss';
 
 const SubAdminPanel = lazy(() => import('./SubAdminPanel'));
@@ -40,13 +40,20 @@ const DashboardPage: React.FC = () => {
 
   // Student onboarding
   const [showOnboardModal, setShowOnboardModal] = useState(false);
+  const [onboardMode, setOnboardMode] = useState<'search' | 'create'>('search');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [enrollingId, setEnrollingId] = useState<number | null>(null);
+  const [enrolledIds, setEnrolledIds] = useState<Set<number>>(new Set());
   const [onboardForm, setOnboardForm] = useState({
     username: '', email: '', password: '', fullName: '',
-    enrollmentNo: '', course: '', yearSemester: '', phone: '',
+    course: '', specialization: '', year: '', semester: '', phone: '',
   });
   const [onboardLoading, setOnboardLoading] = useState(false);
   const [onboardError, setOnboardError] = useState('');
   const [onboardSuccess, setOnboardSuccess] = useState('');
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Students never land here — send them to their portal
   useEffect(() => {
@@ -195,6 +202,38 @@ const DashboardPage: React.FC = () => {
     user?.role === 'super' || user?.role === 'admin' ||
     user?.role === 'sub_admin' || user?.role === 'administrator';
 
+  const handleSearchChange = (q: string) => {
+    setSearchQuery(q);
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    if (!q.trim()) { setSearchResults([]); return; }
+    searchTimerRef.current = setTimeout(async () => {
+      setSearchLoading(true);
+      const res = await apiClient.searchStudents(q.trim());
+      setSearchLoading(false);
+      setSearchResults(res.data ?? []);
+    }, 400);
+  };
+
+  const handleEnroll = async (student: any) => {
+    if (!portal?.id) return;
+    setEnrollingId(student.userId);
+    const res = await apiClient.enrollStudentToPortal(student.userId, portal.id);
+    setEnrollingId(null);
+    if (res.error) { setOnboardError(res.error); return; }
+    setEnrolledIds(prev => new Set(prev).add(student.userId));
+  };
+
+  const closeOnboardModal = () => {
+    setShowOnboardModal(false);
+    setOnboardMode('search');
+    setSearchQuery('');
+    setSearchResults([]);
+    setOnboardError('');
+    setOnboardSuccess('');
+    setEnrolledIds(new Set());
+    setOnboardForm({ username: '', email: '', password: '', fullName: '', course: '', specialization: '', year: '', semester: '', phone: '' });
+  };
+
   const handleOnboard = async (e: React.FormEvent) => {
     e.preventDefault();
     setOnboardLoading(true);
@@ -203,12 +242,11 @@ const DashboardPage: React.FC = () => {
     const res = await apiClient.onboardStudent({
       ...onboardForm,
       portalId: portal?.id,
-      folderIds: [],
     });
     setOnboardLoading(false);
     if (res.error) { setOnboardError(res.error); return; }
-    setOnboardSuccess(`Student "${onboardForm.username}" created successfully!`);
-    setOnboardForm({ username: '', email: '', password: '', fullName: '', enrollmentNo: '', course: '', yearSemester: '', phone: '' });
+    setOnboardSuccess(`Student "${onboardForm.username}" created and enrolled successfully!`);
+    setOnboardForm({ username: '', email: '', password: '', fullName: '', course: '', specialization: '', year: '', semester: '', phone: '' });
   };
 
   // Role-based panel rendering — only admin/super see full folder dashboard
@@ -253,7 +291,7 @@ const DashboardPage: React.FC = () => {
               )}
             </div>
             {canOnboardStudents && (
-              <button className="btn-onboard" onClick={() => setShowOnboardModal(true)}>
+              <button className="btn-onboard" onClick={() => { setShowOnboardModal(true); setOnboardMode('search'); }}>
                 <UserPlus size={17} />
                 Onboard Student
               </button>
@@ -497,64 +535,145 @@ const DashboardPage: React.FC = () => {
 
       {/* Student onboarding modal */}
       {showOnboardModal && (
-        <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) setShowOnboardModal(false); }}>
+        <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) closeOnboardModal(); }}>
           <div className="modal onboard-modal">
             <div className="modal-header">
-              <h3>Onboard Student</h3>
-              <button className="modal-close" type="button" onClick={() => { setShowOnboardModal(false); setOnboardError(''); setOnboardSuccess(''); }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                {onboardMode === 'create' && (
+                  <button className="modal-close" type="button" onClick={() => { setOnboardMode('search'); setOnboardError(''); setOnboardSuccess(''); }}>
+                    <ArrowLeft size={17} />
+                  </button>
+                )}
+                <h3>{onboardMode === 'search' ? 'Enroll Student' : 'Create New Student'}</h3>
+              </div>
+              <button className="modal-close" type="button" onClick={closeOnboardModal}>
                 <X size={18} />
               </button>
             </div>
-            <form onSubmit={handleOnboard}>
-              <div className="onboard-grid">
-                <div className="form-field">
-                  <label className="field-label">Username *</label>
-                  <input required value={onboardForm.username} onChange={e => setOnboardForm(f => ({ ...f, username: e.target.value }))} placeholder="username" />
-                </div>
-                <div className="form-field">
-                  <label className="field-label">Email *</label>
-                  <input required type="email" value={onboardForm.email} onChange={e => setOnboardForm(f => ({ ...f, email: e.target.value }))} placeholder="student@example.com" />
-                </div>
-                <div className="form-field">
-                  <label className="field-label">Password *</label>
-                  <input required type="password" value={onboardForm.password} onChange={e => setOnboardForm(f => ({ ...f, password: e.target.value }))} placeholder="Temporary password" />
-                </div>
-                <div className="form-field">
-                  <label className="field-label">Full Name</label>
-                  <input value={onboardForm.fullName} onChange={e => setOnboardForm(f => ({ ...f, fullName: e.target.value }))} placeholder="Full name" />
-                </div>
-                <div className="form-field">
-                  <label className="field-label">Enrollment No.</label>
-                  <input value={onboardForm.enrollmentNo} onChange={e => setOnboardForm(f => ({ ...f, enrollmentNo: e.target.value }))} placeholder="e.g. 2024CS001" />
-                </div>
-                <div className="form-field">
-                  <label className="field-label">Course / Program</label>
-                  <input value={onboardForm.course} onChange={e => setOnboardForm(f => ({ ...f, course: e.target.value }))} placeholder="e.g. B.Tech CSE" />
-                </div>
-                <div className="form-field">
-                  <label className="field-label">Year / Semester</label>
-                  <input value={onboardForm.yearSemester} onChange={e => setOnboardForm(f => ({ ...f, yearSemester: e.target.value }))} placeholder="e.g. 2nd Year / Sem 3" />
-                </div>
-                <div className="form-field">
-                  <label className="field-label">Phone</label>
-                  <input type="tel" value={onboardForm.phone} onChange={e => setOnboardForm(f => ({ ...f, phone: e.target.value }))} placeholder="Phone number" />
-                </div>
-              </div>
 
-              {onboardError && (
-                <div className="onboard-error"><AlertCircle size={14} /> {onboardError}</div>
-              )}
-              {onboardSuccess && (
-                <div className="onboard-success"><CheckCircle size={14} /> {onboardSuccess}</div>
-              )}
+            {onboardMode === 'search' ? (
+              <div className="onboard-search-pane">
+                <div className="onboard-search-bar">
+                  <Search size={16} className="search-icon" />
+                  <input
+                    autoFocus
+                    type="text"
+                    placeholder="Search by roll no, name or email…"
+                    value={searchQuery}
+                    onChange={e => handleSearchChange(e.target.value)}
+                  />
+                </div>
 
-              <div className="modal-actions">
-                <button type="button" className="btn-secondary" onClick={() => setShowOnboardModal(false)}>Cancel</button>
-                <button type="submit" className="btn-primary" disabled={onboardLoading}>
-                  {onboardLoading ? 'Creating...' : 'Create Student Account'}
+                {onboardError && (
+                  <div className="onboard-error"><AlertCircle size={14} /> {onboardError}</div>
+                )}
+
+                <div className="search-results-list">
+                  {searchLoading && <p className="search-hint">Searching…</p>}
+                  {!searchLoading && searchQuery && searchResults.length === 0 && (
+                    <p className="search-hint">No students found.</p>
+                  )}
+                  {!searchLoading && !searchQuery && (
+                    <p className="search-hint">Type to search existing students.</p>
+                  )}
+                  {searchResults.map((s: any) => {
+                    const done = enrolledIds.has(s.userId);
+                    return (
+                      <div key={s.userId} className="student-result-row">
+                        <div className="student-result-avatar">{(s.fullName || s.username || '?')[0].toUpperCase()}</div>
+                        <div className="student-result-info">
+                          <span className="student-result-name">{s.fullName || s.username}</span>
+                          <span className="student-result-meta">
+                            {s.username}{s.course ? ` · ${s.course}` : ''}{s.year ? ` · Year ${s.year}` : ''}
+                          </span>
+                        </div>
+                        <button
+                          className={`btn-enroll${done ? ' enrolled' : ''}`}
+                          disabled={done || enrollingId === s.userId}
+                          onClick={() => handleEnroll(s)}
+                        >
+                          {done ? <><CheckCircle size={14} /> Enrolled</> : enrollingId === s.userId ? 'Enrolling…' : <><UserCheck size={14} /> Enroll</>}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="onboard-divider">
+                  <span>or</span>
+                </div>
+                <button className="btn-create-new" onClick={() => { setOnboardMode('create'); setOnboardError(''); }}>
+                  <UserPlus size={16} /> Create New Student Account
                 </button>
               </div>
-            </form>
+            ) : (
+              <form onSubmit={handleOnboard}>
+                <div className="onboard-grid">
+                  <div className="form-field">
+                    <label className="field-label">Roll Number (Username) <span className="required">*</span></label>
+                    <input required value={onboardForm.username} onChange={e => setOnboardForm(f => ({ ...f, username: e.target.value }))} placeholder="e.g. 2024CS001" />
+                  </div>
+                  <div className="form-field">
+                    <label className="field-label">Full Name</label>
+                    <input value={onboardForm.fullName} onChange={e => setOnboardForm(f => ({ ...f, fullName: e.target.value }))} placeholder="Student full name" />
+                  </div>
+                  <div className="form-field">
+                    <label className="field-label">Email <span className="required">*</span></label>
+                    <input required type="email" value={onboardForm.email} onChange={e => setOnboardForm(f => ({ ...f, email: e.target.value }))} placeholder="student@example.com" />
+                  </div>
+                  <div className="form-field">
+                    <label className="field-label">Password <span className="required">*</span></label>
+                    <input required type="password" value={onboardForm.password} onChange={e => setOnboardForm(f => ({ ...f, password: e.target.value }))} placeholder="Temporary password" />
+                  </div>
+                  <div className="form-field">
+                    <label className="field-label">Course / Program</label>
+                    <input value={onboardForm.course} onChange={e => setOnboardForm(f => ({ ...f, course: e.target.value }))} placeholder="e.g. B.Tech, MBA, B.Sc" />
+                  </div>
+                  <div className="form-field">
+                    <label className="field-label">Specialization / Branch</label>
+                    <input value={onboardForm.specialization} onChange={e => setOnboardForm(f => ({ ...f, specialization: e.target.value }))} placeholder="e.g. Computer Science, Finance" />
+                  </div>
+                  <div className="form-field">
+                    <label className="field-label">Year</label>
+                    <select value={onboardForm.year} onChange={e => setOnboardForm(f => ({ ...f, year: e.target.value }))}>
+                      <option value="">Select year</option>
+                      <option value="1">1st Year</option>
+                      <option value="2">2nd Year</option>
+                      <option value="3">3rd Year</option>
+                      <option value="4">4th Year</option>
+                      <option value="5">5th Year</option>
+                    </select>
+                  </div>
+                  <div className="form-field">
+                    <label className="field-label">Semester</label>
+                    <select value={onboardForm.semester} onChange={e => setOnboardForm(f => ({ ...f, semester: e.target.value }))}>
+                      <option value="">Select semester</option>
+                      {[1,2,3,4,5,6,7,8].map(n => (
+                        <option key={n} value={String(n)}>Sem {n}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-field">
+                    <label className="field-label">Phone</label>
+                    <input type="tel" value={onboardForm.phone} onChange={e => setOnboardForm(f => ({ ...f, phone: e.target.value }))} placeholder="Phone number" />
+                  </div>
+                </div>
+
+                {onboardError && (
+                  <div className="onboard-error"><AlertCircle size={14} /> {onboardError}</div>
+                )}
+                {onboardSuccess && (
+                  <div className="onboard-success"><CheckCircle size={14} /> {onboardSuccess}</div>
+                )}
+
+                <div className="modal-actions">
+                  <button type="button" className="btn-secondary" onClick={closeOnboardModal}>Cancel</button>
+                  <button type="submit" className="btn-primary" disabled={onboardLoading}>
+                    {onboardLoading ? 'Creating…' : 'Create & Enroll'}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}

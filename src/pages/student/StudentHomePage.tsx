@@ -34,12 +34,15 @@ const StudentHomePage: React.FC = () => {
 
   const fetchNews = async () => {
     setLoadingNews(true);
-    const res = await apiClient.getNews({ portalId: portal!.id });
+    // Load enrolled folders first, then fetch aggregated student news
+    const foldersRes = await apiClient.getPortalFolders(portal!.id);
+    const rawFolders = Array.isArray(foldersRes.data) ? foldersRes.data : [];
+    const folderIds: string[] = rawFolders.map((f: any) => String(f.folderId ?? f.id));
+
+    const res = await apiClient.getStudentNews(portal!.id, folderIds);
     setLoadingNews(false);
     if (res.error) { setNewsError(res.error); return; }
-    const items: NewsPost[] = Array.isArray(res.data?.data) ? res.data.data :
-      Array.isArray(res.data) ? res.data : [];
-    // pinned first, then by date desc
+    const items: NewsPost[] = Array.isArray(res.data) ? res.data : [];
     items.sort((a, b) => {
       if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1;
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();

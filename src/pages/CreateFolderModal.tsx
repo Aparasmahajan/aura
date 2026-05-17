@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { apiClient } from '../utils/api';
-import { FolderPlus } from 'lucide-react';
+import { FolderPlus, X, Plus, Trash2 } from 'lucide-react';
 import './CreateFolderModal.scss';
 
 interface EmailItem {
@@ -86,76 +86,112 @@ const CreateFolderModal: React.FC<CreateFolderModalProps> = ({ portalName, paren
   };
 
   return (
-    <div className="modal-overlay">
-      <div className="modal">
-        <h3>Create Folder</h3>
-        <form onSubmit={handleSubmit}>
-          <input
-            type="text"
-            placeholder="Name"
-            value={createForm.name}
-            onChange={e => setCreateForm(f => ({ ...f, name: e.target.value }))}
-            required
-          />
-          <textarea
-            placeholder="Description"
-            value={createForm.description}
-            onChange={e => setCreateForm(f => ({ ...f, description: e.target.value }))}
-          />
-          <label>
+    <div className="cfm-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="cfm-modal">
+        <div className="cfm-header">
+          <div className="cfm-header-icon"><FolderPlus size={18} /></div>
+          <h3>Create Folder</h3>
+          <button className="cfm-close" type="button" onClick={onClose}><X size={18} /></button>
+        </div>
+
+        <form className="cfm-body" onSubmit={handleSubmit}>
+          <div className="cfm-field">
+            <label>Folder Name *</label>
+            <input
+              type="text"
+              placeholder="e.g. Physics — Semester 3"
+              value={createForm.name}
+              onChange={e => setCreateForm(f => ({ ...f, name: e.target.value }))}
+              required
+            />
+          </div>
+
+          <div className="cfm-field">
+            <label>Description</label>
+            <textarea
+              rows={2}
+              placeholder="Optional description…"
+              value={createForm.description}
+              onChange={e => setCreateForm(f => ({ ...f, description: e.target.value }))}
+            />
+          </div>
+
+          <div className="cfm-row">
+            <div className="cfm-field cfm-field-half">
+              <label>Price (₹)</label>
+              <input
+                type="number"
+                placeholder="0"
+                value={createForm.price}
+                onChange={e => setCreateForm(f => ({ ...f, price: e.target.value }))}
+              />
+            </div>
+            <div className="cfm-field cfm-field-half">
+              <label>Access Duration (days)</label>
+              <input
+                type="number"
+                placeholder="365"
+                value={createForm.accessDurationInDays}
+                onChange={e => setCreateForm(f => ({ ...f, accessDurationInDays: e.target.value }))}
+              />
+            </div>
+          </div>
+
+          <label className="cfm-checkbox">
             <input
               type="checkbox"
               checked={createForm.isUniversal}
               onChange={e => setCreateForm(f => ({ ...f, isUniversal: e.target.checked }))}
-            /> Universal
+            />
+            <span>Universal (visible to all portal users)</span>
           </label>
-          <input
-            type="number"
-            placeholder="Price"
-            value={createForm.price}
-            onChange={e => setCreateForm(f => ({ ...f, price: e.target.value }))}
-          />
-          <input
-            type="number"
-            placeholder="Access Duration (days)"
-            value={createForm.accessDurationInDays}
-            onChange={e => setCreateForm(f => ({ ...f, accessDurationInDays: e.target.value }))}
-          />
 
-          <div className="emails-inputs">
-            {emails.map((item, index) => (
-              <div key={index} className="email-row">
-                <input
-                  type="email"
-                  placeholder="User Email"
-                  value={item.email}
-                  onChange={e => {
-                    const newEmails = [...emails];
-                    newEmails[index].email = e.target.value;
-                    newEmails[index].userId = null;
-                    newEmails[index].error = '';
-                    setEmails(newEmails);
-                  }}
-                  onBlur={() => handleEmailBlur(index)}
-                  disabled={item.userId !== null}
-                />
-                {item.loading && <span className="loading-spinner">⏳</span>}
-                {item.error && <span className="error-message">{item.error}</span>}
-                {emails.length > 1 && <button type="button" onClick={() => setEmails(emails.filter((_, i) => i !== index))}>Remove</button>}
-              </div>
-            ))}
-            {emails[emails.length - 1]?.error === '' && (
-              <button type="button" onClick={() => setEmails([...emails, { email: '', userId: null, loading: false }])}>
-                Add Another Email
-              </button>
-            )}
+          <div className="cfm-field">
+            <label>Grant Access (optional)</label>
+            <div className="cfm-emails">
+              {emails.map((item, index) => (
+                <div key={index} className="cfm-email-row">
+                  <input
+                    type="email"
+                    placeholder="student@email.com"
+                    value={item.email}
+                    onChange={e => {
+                      const newEmails = [...emails];
+                      newEmails[index].email = e.target.value;
+                      newEmails[index].userId = null;
+                      newEmails[index].error = '';
+                      setEmails(newEmails);
+                    }}
+                    onBlur={() => handleEmailBlur(index)}
+                    disabled={item.userId !== null}
+                    className={item.userId ? 'resolved' : item.error ? 'has-error' : ''}
+                  />
+                  {item.loading && <span className="cfm-spinner" />}
+                  {item.userId && <span className="cfm-resolved">✓</span>}
+                  {emails.length > 1 && (
+                    <button type="button" className="cfm-remove-email" onClick={() => setEmails(emails.filter((_, i) => i !== index))}>
+                      <Trash2 size={13} />
+                    </button>
+                  )}
+                  {item.error && <p className="cfm-email-error">{item.error}</p>}
+                </div>
+              ))}
+              {emails[emails.length - 1]?.error === '' && (
+                <button type="button" className="cfm-add-email" onClick={() => setEmails([...emails, { email: '', userId: null, loading: false }])}>
+                  <Plus size={13} /> Add another email
+                </button>
+              )}
+            </div>
           </div>
 
-          <button type="submit" className="btn-primary" disabled={loading}>
-            {loading ? 'Creating...' : 'Create'}
-          </button>
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          {error && <div className="error-message">{error}</div>}
+          {error && <div className="cfm-error">{error}</div>}
+
+          <div className="cfm-footer">
+            <button type="button" className="cfm-btn-cancel" onClick={onClose}>Cancel</button>
+            <button type="submit" className="cfm-btn-create" disabled={loading}>
+              {loading ? 'Creating…' : <><FolderPlus size={15} /> Create Folder</>}
+            </button>
+          </div>
         </form>
       </div>
     </div>

@@ -133,6 +133,48 @@
 .form-error { color: #ef4444; font-size: 0.83rem; margin: 0; }
 .form-success { color: #22c55e; font-size: 0.83rem; margin: 0; }
 
+// Submission type tabs inside modal
+.sub-type-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.sub-type-tab {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 7px 6px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+
+  &.active {
+    background: #0ea5e9;
+    color: #fff;
+    border-color: transparent;
+  }
+
+  &:not(.active):hover { background: #e0f2fe; border-color: #7dd3fc; }
+}
+
+.exam-hint {
+  font-size: 0.82rem;
+  color: #475569;
+  margin: 0;
+  padding: 6px 10px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 6px;
+}
+
 @media (max-width: 640px) {
   .student-assignments {
     max-width: 100%;

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Folder, ArrowLeft, FolderPlus, Book, X, UserCheck, Trash2, Shield, UserPlus, AlertCircle, CheckCircle, Search, Users } from 'lucide-react';
+import { Folder, ArrowLeft, FolderPlus, Book, X, UserCheck, Trash2, Shield, UserPlus, AlertCircle, CheckCircle, Search, Users, Megaphone, Pin, ClipboardList, Clock, FileText, Link, GraduationCap, ChevronDown, ChevronUp } from 'lucide-react';
 import { apiClient } from '../utils/api';
 import { useAuth } from '../contexts/AuthContext';
 import CreateFolderModal from '../pages/CreateFolderModal';
@@ -103,6 +103,26 @@ const FolderDetailsPage: React.FC = () => {
     const [onboardError, setOnboardError] = useState('');
     const [onboardSuccess, setOnboardSuccess] = useState('');
 
+    // ── Announcements ──
+    const [folderAnnouncements, setFolderAnnouncements] = useState<any[]>([]);
+    const [annLoading, setAnnLoading] = useState(false);
+    const [annForm, setAnnForm] = useState({ title: '', body: '', isPinned: false });
+    const [annPosting, setAnnPosting] = useState(false);
+    const [annError, setAnnError] = useState('');
+    const [annOpen, setAnnOpen] = useState(true);
+
+    // ── Assignments ──
+    const [folderAssignments, setFolderAssignments] = useState<any[]>([]);
+    const [assignmentsLoading, setAssignmentsLoading] = useState(false);
+    const [showAsgForm, setShowAsgForm] = useState(false);
+    const [asgForm, setAsgForm] = useState({
+        title: '', description: '', assignmentType: 'LINK' as 'LINK' | 'TEXT' | 'EXAM',
+        fileUrl: '', textContent: '', examCode: '', dueDate: '',
+    });
+    const [asgPosting, setAsgPosting] = useState(false);
+    const [asgError, setAsgError] = useState('');
+    const [folderExams, setFolderExams] = useState<any[]>([]);
+
     useEffect(() => {
         if (!isAuthenticated) {
             navigate(`/${portalName}/login`);
@@ -135,11 +155,19 @@ const FolderDetailsPage: React.FC = () => {
         };
         
         fetchFolder();
-        
+
         return () => {
             isCancelled = true;
         };
     }, [folderId, isAuthenticated]);
+
+    useEffect(() => {
+        if (folder && canManage) {
+            loadAnnouncements();
+            loadAssignments();
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [folder?.folderId]);
 
 
     useEffect(() => {
@@ -254,6 +282,81 @@ const FolderDetailsPage: React.FC = () => {
         setOnboardSuccess(`Student "${onboardForm.username}" created and added to folder!`);
         setOnboardForm({ username: '', email: '', password: '', fullName: '', course: '', specialization: '', year: '', semester: '', phone: '' });
         loadEnrolledStudents();
+    };
+
+    // ── Announcements ──────────────────────────────────────────
+    const loadAnnouncements = async () => {
+        if (!folder) return;
+        setAnnLoading(true);
+        const res = await apiClient.getNews({ portalId: String(folder.portalId), folderId: String(folder.folderId) });
+        setAnnLoading(false);
+        setFolderAnnouncements(Array.isArray(res.data) ? res.data : []);
+    };
+
+    const handlePostAnnouncement = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!folder) return;
+        setAnnPosting(true);
+        setAnnError('');
+        const res = await apiClient.createNews({
+            portalId: String(folder.portalId),
+            folderId: String(folder.folderId),
+            scope: 'FOLDER',
+            title: annForm.title,
+            body: annForm.body,
+            isPinned: annForm.isPinned,
+        });
+        setAnnPosting(false);
+        if (res.error) { setAnnError(res.error); return; }
+        setAnnForm({ title: '', body: '', isPinned: false });
+        loadAnnouncements();
+    };
+
+    const handleDeleteAnnouncement = async (id: string) => {
+        await apiClient.deleteNews(id);
+        setFolderAnnouncements(prev => prev.filter((a: any) => String(a.newsId ?? a.id) !== id));
+    };
+
+    // ── Assignments ────────────────────────────────────────────
+    const loadAssignments = async () => {
+        if (!folder) return;
+        setAssignmentsLoading(true);
+        const [asgRes, examRes] = await Promise.all([
+            apiClient.getFolderAssignments(String(folder.folderId)),
+            apiClient.getFolderExams(String(folder.folderId)),
+        ]);
+        setAssignmentsLoading(false);
+        const asgArr = Array.isArray(asgRes.data?.data) ? asgRes.data.data : Array.isArray(asgRes.data) ? asgRes.data : [];
+        setFolderAssignments(asgArr);
+        const examArr = Array.isArray(examRes.data?.data) ? examRes.data.data : Array.isArray(examRes.data) ? examRes.data : [];
+        setFolderExams(examArr);
+    };
+
+    const handlePostAssignment = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!folder) return;
+        setAsgPosting(true);
+        setAsgError('');
+        const res = await apiClient.createAssignment({
+            folderId: String(folder.folderId),
+            title: asgForm.title,
+            description: asgForm.description || undefined,
+            assignmentType: asgForm.assignmentType,
+            fileUrl: asgForm.assignmentType === 'LINK' ? asgForm.fileUrl || undefined : undefined,
+            textContent: asgForm.assignmentType === 'TEXT' ? asgForm.textContent || undefined : undefined,
+            examCode: asgForm.assignmentType === 'EXAM' ? asgForm.examCode || undefined : undefined,
+            dueDate: asgForm.dueDate || undefined,
+        });
+        setAsgPosting(false);
+        if (res.error) { setAsgError(res.error); return; }
+        setAsgForm({ title: '', description: '', assignmentType: 'LINK', fileUrl: '', textContent: '', examCode: '', dueDate: '' });
+        setShowAsgForm(false);
+        loadAssignments();
+    };
+
+    const handleDeleteAssignment = async (id: number) => {
+        await apiClient.deleteAssignment(String(id));
+        setFolderAssignments(prev => prev.filter((a: any) => a.assignmentId !== id));
     };
 
     const handleAccessEmailAdd = async () => {
@@ -467,6 +570,136 @@ const FolderDetailsPage: React.FC = () => {
                             onCreated={() => window.location.reload()}
                         />
                     )}
+                    {/* ── Announcements Section ─────────────────────────── */}
+                    {canManage && (
+                        <div className={`folder-section folder-announcements${annOpen ? '' : ' collapsed'}`}>
+                            <div className="fs-header" onClick={() => setAnnOpen(v => !v)} style={{ cursor: 'pointer' }}>
+                                <div className="fs-title"><Megaphone size={16} /> Announcements</div>
+                                <span className="fs-count">{folderAnnouncements.length}</span>
+                                <button className="fs-toggle" type="button" onClick={e => { e.stopPropagation(); setAnnOpen(v => !v); }}>
+                                    {annOpen ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+                                </button>
+                            </div>
+
+                            {annOpen && (
+                                <>
+                                    <form className="ann-inline-form" onSubmit={handlePostAnnouncement}>
+                                        <input
+                                            required placeholder="Announcement title…"
+                                            value={annForm.title}
+                                            onChange={e => setAnnForm(f => ({ ...f, title: e.target.value }))}
+                                        />
+                                        <textarea
+                                            required rows={2} placeholder="Write announcement…"
+                                            value={annForm.body}
+                                            onChange={e => setAnnForm(f => ({ ...f, body: e.target.value }))}
+                                        />
+                                        <div className="ann-inline-footer">
+                                            <label className="ann-pin-chk">
+                                                <input type="checkbox" checked={annForm.isPinned} onChange={e => setAnnForm(f => ({ ...f, isPinned: e.target.checked }))} />
+                                                <Pin size={12} /> Pin
+                                            </label>
+                                            {annError && <span className="ann-err-text">{annError}</span>}
+                                            <button type="submit" className="btn-post-ann-sm" disabled={annPosting}>
+                                                {annPosting ? 'Posting…' : 'Post'}
+                                            </button>
+                                        </div>
+                                    </form>
+
+                                    {annLoading && <p className="fs-empty">Loading…</p>}
+                                    {!annLoading && folderAnnouncements.length === 0 && <p className="fs-empty">No announcements yet.</p>}
+                                    <div className="ann-cards">
+                                        {folderAnnouncements.map((a: any) => {
+                                            const id = String(a.newsId ?? a.id);
+                                            return (
+                                                <div key={id} className={`ann-card${a.isPinned ? ' pinned' : ''}`}>
+                                                    <div className="ann-card-head">
+                                                        <div className="ann-badges">
+                                                            {a.isPinned && <span className="badge-pin"><Pin size={10} /> Pinned</span>}
+                                                            <span className="badge-scope">{a.scope ?? 'FOLDER'}</span>
+                                                        </div>
+                                                        <button className="ann-del-btn" onClick={() => handleDeleteAnnouncement(id)}><Trash2 size={13} /></button>
+                                                    </div>
+                                                    <h4>{a.title}</h4>
+                                                    <p>{a.body}</p>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    )}
+
+                    {/* ── Assignments Section ────────────────────────────── */}
+                    {canManage && (
+                        <div className="folder-section folder-assignments">
+                            <div className="fs-header">
+                                <div className="fs-title"><ClipboardList size={16} /> Assignments</div>
+                                <button className="btn-add-asg" onClick={() => { setShowAsgForm(v => !v); setAsgError(''); }}>
+                                    {showAsgForm ? 'Cancel' : '+ Add Assignment'}
+                                </button>
+                            </div>
+
+                            {showAsgForm && (
+                                <form className="asg-form" onSubmit={handlePostAssignment}>
+                                    <div className="asg-type-tabs">
+                                        {(['LINK', 'TEXT', 'EXAM'] as const).map(t => (
+                                            <button key={t} type="button"
+                                                className={`asg-type-tab${asgForm.assignmentType === t ? ' active' : ''}`}
+                                                onClick={() => setAsgForm(f => ({ ...f, assignmentType: t }))}>
+                                                {t === 'LINK' ? <><Link size={13} /> Link</> : t === 'TEXT' ? <><FileText size={13} /> Text</> : <><GraduationCap size={13} /> Exam</>}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <input required placeholder="Title *" value={asgForm.title} onChange={e => setAsgForm(f => ({ ...f, title: e.target.value }))} />
+                                    <textarea rows={2} placeholder="Description (optional)" value={asgForm.description} onChange={e => setAsgForm(f => ({ ...f, description: e.target.value }))} />
+
+                                    {asgForm.assignmentType === 'LINK' && (
+                                        <input type="url" placeholder="Assignment file / document URL" value={asgForm.fileUrl} onChange={e => setAsgForm(f => ({ ...f, fileUrl: e.target.value }))} />
+                                    )}
+                                    {asgForm.assignmentType === 'TEXT' && (
+                                        <textarea rows={4} placeholder="Write the assignment content here…" value={asgForm.textContent} onChange={e => setAsgForm(f => ({ ...f, textContent: e.target.value }))} />
+                                    )}
+                                    {asgForm.assignmentType === 'EXAM' && (
+                                        <select value={asgForm.examCode} onChange={e => setAsgForm(f => ({ ...f, examCode: e.target.value }))}>
+                                            <option value="">-- Select exam --</option>
+                                            {folderExams.map((ex: any) => (
+                                                <option key={ex.examId} value={ex.examCode}>{ex.examTitle} ({ex.examCode})</option>
+                                            ))}
+                                        </select>
+                                    )}
+
+                                    <div className="asg-form-footer">
+                                        <label className="asg-due-label"><Clock size={13} /> Due date</label>
+                                        <input type="date" value={asgForm.dueDate} onChange={e => setAsgForm(f => ({ ...f, dueDate: e.target.value }))} />
+                                        {asgError && <span className="asg-err">{asgError}</span>}
+                                        <button type="submit" className="btn-post-asg" disabled={asgPosting}>{asgPosting ? 'Saving…' : 'Create'}</button>
+                                    </div>
+                                </form>
+                            )}
+
+                            {assignmentsLoading && <p className="fs-empty">Loading…</p>}
+                            {!assignmentsLoading && folderAssignments.length === 0 && !showAsgForm && <p className="fs-empty">No assignments yet.</p>}
+                            <div className="asg-list">
+                                {folderAssignments.map((a: any) => (
+                                    <div key={a.assignmentId} className="asg-item">
+                                        <div className="asg-item-head">
+                                            <span className={`asg-type-badge type-${(a.assignmentType ?? 'LINK').toLowerCase()}`}>
+                                                {a.assignmentType === 'EXAM' ? <GraduationCap size={11} /> : a.assignmentType === 'TEXT' ? <FileText size={11} /> : <Link size={11} />}
+                                                {a.assignmentType ?? 'LINK'}
+                                            </span>
+                                            <h4>{a.title}</h4>
+                                            <button className="asg-del-btn" onClick={() => handleDeleteAssignment(a.assignmentId)}><Trash2 size={13} /></button>
+                                        </div>
+                                        {a.description && <p className="asg-desc">{a.description}</p>}
+                                        {a.dueDate && <span className="asg-due"><Clock size={11} /> Due: {a.dueDate}</span>}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
                     <h2>Subfolders</h2>
                     {folder.subFolders.length === 0 ? (
                         <p className="empty">No subfolders</p>

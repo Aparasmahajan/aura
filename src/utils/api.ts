@@ -1,4 +1,3 @@
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 export interface ApiResponse<T = any> {
@@ -10,13 +9,10 @@ export interface ApiResponse<T = any> {
 type CheckResult = { taken: boolean; message?: string };
 
 class ApiClient {
-  private baseUrl: string;
   private checkCache = new Map<string, { result: CheckResult; expiresAt: number }>();
   private static CACHE_TTL_MS = 30_000;
 
-  constructor() {
-    this.baseUrl = `${SUPABASE_URL}/functions/v1`;
-  }
+  constructor() {}
 
   private getCachedCheck(key: string): CheckResult | null {
     const entry = this.checkCache.get(key);
@@ -75,7 +71,7 @@ class ApiClient {
       const response = await fetch(`http://localhost:8090/profiler/user/login`, {
         method: 'POST',
         headers: this.getHeaders(),
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username: username.trim(), password }),
       });
 
       const raw = await response.json();
@@ -677,23 +673,31 @@ async folderAccessUpdate(folderId: number, userIds: number[]): Promise<ApiRespon
   async createNews(data: {
     portalId: string;
     folderId?: string | null;
+    scope?: 'PORTAL' | 'FOLDER' | 'SUBFOLDER';
     title: string;
     body: string;
     isPinned?: boolean;
   }): Promise<ApiResponse> {
     try {
       const token = this.getAuthToken();
+      const userId = this.getAuthUserId();
+      const payload = {
+        ...data,
+        scope: data.scope ?? (data.folderId ? 'FOLDER' : 'PORTAL'),
+      };
       const response = await fetch('http://localhost:8090/profiler/news', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          ...(userId ? { 'userId': userId } : {}),
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify(payload),
       });
       const raw = await response.json();
-      if (!response.ok) return { error: raw.message || 'Failed to post news' };
-      return { data: raw };
+      const rc = String(raw?.responseCode ?? '');
+      if (rc !== '2000') return { error: raw.message || 'Failed to post news' };
+      return { data: raw.data ?? raw };
     } catch {
       return { error: 'Network error' };
     }
@@ -714,9 +718,33 @@ async folderAccessUpdate(folderId: number, userIds: number[]): Promise<ApiRespon
           },
         }
       );
-      const data = await response.json();
-      if (!response.ok) return { error: data.message || 'Failed to fetch news' };
-      return { data };
+      const raw = await response.json();
+      const rc = String(raw?.responseCode ?? '');
+      if (rc !== '2000') return { error: raw.message || 'Failed to fetch news' };
+      return { data: Array.isArray(raw.data) ? raw.data : [] };
+    } catch {
+      return { error: 'Network error' };
+    }
+  }
+
+  async getStudentNews(portalId: string, folderIds: string[]): Promise<ApiResponse> {
+    try {
+      const token = this.getAuthToken();
+      const qs = new URLSearchParams({ portalId });
+      if (folderIds.length > 0) qs.set('folderIds', folderIds.join(','));
+      const response = await fetch(
+        `http://localhost:8090/profiler/news/student?${qs}`,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          },
+        }
+      );
+      const raw = await response.json();
+      const rc = String(raw?.responseCode ?? '');
+      if (rc !== '2000') return { error: raw.message || 'Failed to fetch news' };
+      return { data: Array.isArray(raw.data) ? raw.data : [] };
     } catch {
       return { error: 'Network error' };
     }
@@ -725,13 +753,18 @@ async folderAccessUpdate(folderId: number, userIds: number[]): Promise<ApiRespon
   async deleteNews(newsId: string): Promise<ApiResponse> {
     try {
       const token = this.getAuthToken();
+      const userId = this.getAuthUserId();
       const response = await fetch(`http://localhost:8090/profiler/news/${newsId}`, {
         method: 'DELETE',
-        headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
+        headers: {
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          ...(userId ? { 'userId': userId } : {}),
+        },
       });
-      const data = await response.json();
-      if (!response.ok) return { error: data.message || 'Failed to delete news' };
-      return { data };
+      const raw = await response.json();
+      const rc = String(raw?.responseCode ?? '');
+      if (rc !== '2000') return { error: raw.message || 'Failed to delete news' };
+      return { data: true };
     } catch {
       return { error: 'Network error' };
     }
@@ -907,7 +940,7 @@ async folderAccessUpdate(folderId: number, userIds: number[]): Promise<ApiRespon
     try {
       const token = this.getAuthToken();
       const response = await fetch(
-        `http://localhost:8091/content/folder/${folderId}/assignments`,
+        `http://localhost:8091/content/assignment/folder/${folderId}`,
         {
           headers: {
             'Content-Type': 'application/json',
@@ -927,47 +960,76 @@ async folderAccessUpdate(folderId: number, userIds: number[]): Promise<ApiRespon
     folderId: string;
     title: string;
     description?: string;
+    assignmentType?: 'LINK' | 'TEXT' | 'EXAM';
     fileUrl?: string;
+    textContent?: string;
+    examCode?: string;
     dueDate?: string;
   }): Promise<ApiResponse> {
     try {
       const token = this.getAuthToken();
+      const userId = this.getAuthUserId();
       const response = await fetch('http://localhost:8091/content/assignment', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          ...(userId ? { 'userId': userId } : {}),
         },
         body: JSON.stringify(data),
       });
       const raw = await response.json();
-      if (!response.ok) return { error: raw.message || 'Failed to create assignment' };
-      return { data: raw };
+      const rc = String(raw?.responseCode ?? '');
+      if (rc !== '2000') return { error: raw.message || 'Failed to create assignment' };
+      return { data: raw.data ?? raw };
     } catch {
       return { error: 'Network error' };
     }
   }
 
   async submitAssignment(assignmentId: string, data: {
+    submissionType?: 'TEXT' | 'FILE' | 'EXAM';
     fileUrl?: string;
     textResponse?: string;
+    examLink?: string;
   }): Promise<ApiResponse> {
     try {
       const token = this.getAuthToken();
-      const response = await fetch(
-        `http://localhost:8091/content/assignment/${assignmentId}/submit`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-          },
-          body: JSON.stringify(data),
-        }
-      );
+      const userId = this.getAuthUserId();
+      const response = await fetch('http://localhost:8091/content/assignment/submit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          ...(userId ? { 'userId': userId } : {}),
+        },
+        body: JSON.stringify({ assignmentId, ...data }),
+      });
       const raw = await response.json();
-      if (!response.ok) return { error: raw.message || 'Failed to submit assignment' };
-      return { data: raw };
+      const rc = String(raw?.responseCode ?? '');
+      if (rc !== '2000') return { error: raw.message || 'Failed to submit assignment' };
+      return { data: raw.data ?? raw };
+    } catch {
+      return { error: 'Network error' };
+    }
+  }
+
+  async deleteAssignment(assignmentId: string): Promise<ApiResponse> {
+    try {
+      const token = this.getAuthToken();
+      const userId = this.getAuthUserId();
+      const response = await fetch(`http://localhost:8091/content/assignment/${assignmentId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          ...(userId ? { 'userId': userId } : {}),
+        },
+      });
+      const raw = await response.json();
+      const rc = String(raw?.responseCode ?? '');
+      if (rc !== '2000') return { error: raw.message || 'Failed to delete assignment' };
+      return { data: true };
     } catch {
       return { error: 'Network error' };
     }

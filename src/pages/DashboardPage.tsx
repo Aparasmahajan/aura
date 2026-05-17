@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { usePortal } from '../contexts/PortalContext';
 import { apiClient } from '../utils/api';
-import { Folder, FolderPlus, LogOut, User, Shield, UserPlus, X, AlertCircle, CheckCircle, Search, ArrowLeft, UserCheck } from 'lucide-react';
+import { Folder, FolderPlus, LogOut, User, Shield, UserPlus, X, AlertCircle, CheckCircle, Search, ArrowLeft, UserCheck, Megaphone, Pin, Trash2, Bell } from 'lucide-react';
 import './DashboardPage.scss';
 
 const SubAdminPanel = lazy(() => import('./SubAdminPanel'));
@@ -54,6 +54,14 @@ const DashboardPage: React.FC = () => {
   const [onboardError, setOnboardError] = useState('');
   const [onboardSuccess, setOnboardSuccess] = useState('');
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Announcements (portal-level)
+  const [showAnnouncementsPanel, setShowAnnouncementsPanel] = useState(false);
+  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [announcementsLoading, setAnnouncementsLoading] = useState(false);
+  const [annForm, setAnnForm] = useState({ title: '', body: '', isPinned: false });
+  const [annPosting, setAnnPosting] = useState(false);
+  const [annError, setAnnError] = useState('');
 
   // Students never land here — send them to their portal
   useEffect(() => {
@@ -124,6 +132,40 @@ const DashboardPage: React.FC = () => {
     loadedPortalIdRef.current = portal.id;
     isFetchingRef.current = false;
     setIsLoading(false);
+  };
+
+  const openAnnouncements = async () => {
+    setShowAnnouncementsPanel(true);
+    setAnnError('');
+    if (!portal?.id) return;
+    setAnnouncementsLoading(true);
+    const res = await apiClient.getNews({ portalId: portal.id });
+    setAnnouncementsLoading(false);
+    setAnnouncements(Array.isArray(res.data) ? res.data : []);
+  };
+
+  const handlePostAnnouncement = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!portal?.id || !annForm.title || !annForm.body) return;
+    setAnnPosting(true);
+    setAnnError('');
+    const res = await apiClient.createNews({
+      portalId: portal.id,
+      scope: 'PORTAL',
+      title: annForm.title,
+      body: annForm.body,
+      isPinned: annForm.isPinned,
+    });
+    setAnnPosting(false);
+    if (res.error) { setAnnError(res.error); return; }
+    setAnnForm({ title: '', body: '', isPinned: false });
+    const refreshed = await apiClient.getNews({ portalId: portal.id });
+    setAnnouncements(Array.isArray(refreshed.data) ? refreshed.data : []);
+  };
+
+  const handleDeleteAnnouncement = async (id: string) => {
+    await apiClient.deleteNews(id);
+    setAnnouncements(prev => prev.filter((a: any) => String(a.newsId ?? a.id) !== id));
   };
 
   const handleLogout = () => {
@@ -294,6 +336,12 @@ const DashboardPage: React.FC = () => {
               <button className="btn-onboard" onClick={() => { setShowOnboardModal(true); setOnboardMode('search'); }}>
                 <UserPlus size={17} />
                 Onboard Student
+              </button>
+            )}
+            {canOnboardStudents && (
+              <button className="btn-announce" onClick={openAnnouncements}>
+                <Bell size={17} />
+                Announcements
               </button>
             )}
             {user?.role === 'super' && (
@@ -532,6 +580,74 @@ const DashboardPage: React.FC = () => {
           )}
         </div>
       </main>
+
+      {/* ── Announcements panel ── */}
+      {showAnnouncementsPanel && (
+        <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) setShowAnnouncementsPanel(false); }}>
+          <div className="modal ann-modal">
+            <div className="modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                <Megaphone size={18} color="#8b5cf6" />
+                <h3>Announcements</h3>
+              </div>
+              <button className="modal-close" type="button" onClick={() => setShowAnnouncementsPanel(false)}><X size={18} /></button>
+            </div>
+
+            {/* Create form */}
+            <div className="ann-create-section">
+              <form onSubmit={handlePostAnnouncement} className="ann-form">
+                <input
+                  required
+                  placeholder="Title…"
+                  value={annForm.title}
+                  onChange={e => setAnnForm(f => ({ ...f, title: e.target.value }))}
+                />
+                <textarea
+                  required
+                  rows={3}
+                  placeholder="Write your announcement…"
+                  value={annForm.body}
+                  onChange={e => setAnnForm(f => ({ ...f, body: e.target.value }))}
+                />
+                <div className="ann-form-footer">
+                  <label className="ann-pin-toggle">
+                    <input type="checkbox" checked={annForm.isPinned} onChange={e => setAnnForm(f => ({ ...f, isPinned: e.target.checked }))} />
+                    <Pin size={13} /> Pin this
+                  </label>
+                  {annError && <span className="ann-error">{annError}</span>}
+                  <button type="submit" className="btn-post-ann" disabled={annPosting}>
+                    {annPosting ? 'Posting…' : 'Post'}
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            {/* List */}
+            <div className="ann-list">
+              {announcementsLoading && <p className="ann-hint">Loading…</p>}
+              {!announcementsLoading && announcements.length === 0 && (
+                <p className="ann-hint">No announcements yet.</p>
+              )}
+              {announcements.map((a: any) => {
+                const id = String(a.newsId ?? a.id);
+                return (
+                  <div key={id} className={`ann-item${a.isPinned ? ' pinned' : ''}`}>
+                    <div className="ann-item-head">
+                      <div className="ann-item-meta">
+                        {a.isPinned && <span className="ann-pin-badge"><Pin size={11} /> Pinned</span>}
+                        <span className="ann-scope-badge">{a.scope ?? 'PORTAL'}</span>
+                      </div>
+                      <button className="ann-delete" onClick={() => handleDeleteAnnouncement(id)}><Trash2 size={14} /></button>
+                    </div>
+                    <h4 className="ann-item-title">{a.title}</h4>
+                    <p className="ann-item-body">{a.body}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Student onboarding modal */}
       {showOnboardModal && (

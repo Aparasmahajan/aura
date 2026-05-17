@@ -1,6 +1,6 @@
 import { ExamData, Section } from '../types/exam';
 
-const EXAM_BACKEND = 'http://localhost:8092/exam';
+const EXAM_BACKEND = 'http://localhost:8090/profiler';
 
 export const loadExamData = async (examCode: string): Promise<ExamData | null> => {
   try {

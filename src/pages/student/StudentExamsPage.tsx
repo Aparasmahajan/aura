@@ -60,7 +60,7 @@ const StudentExamsPage: React.FC = () => {
     setError('');
 
     const res = await apiClient.generateExamLink({
-      examId:          exam.id,
+      examCode:        exam.examCode,
       userName:        user.fullName ?? user.username ?? 'Student',
       userEmail:       user.email ?? '',
       validForMinutes: 180,

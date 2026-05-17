@@ -63,7 +63,7 @@
     color: #475569;
   }
 
-  input, select, textarea {
+  input, select, textarea, input[readonly] {
     border: 1px solid #e2e8f0;
     border-radius: 7px;
     padding: 9px 12px;
